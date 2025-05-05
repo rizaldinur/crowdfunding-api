@@ -1,6 +1,17 @@
 import express from "express";
+import bodyParser from "body-parser";
+import authRoutes from "./routes/auth.js";
+import mongoose from "mongoose";
+import { config } from "dotenv";
 
+config();
 const app = express();
+
+app.use(bodyParser.json());
+
+app.post("/post-proof", (req, res, next) => {
+  res.json({ message: "success." });
+});
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -12,6 +23,33 @@ app.use((req, res, next) => {
   next();
 });
 
-app.listen(3000, () => {
-  console.log("Server started: http://localhost:3000");
+app.use(authRoutes);
+
+app.use((error, req, res, next) => {
+  console.log(error);
+  const status = error.statusCode || 500;
+  const message =
+    error.statusCode === 500
+      ? "Something went wrong. (Error 500)"
+      : error.message;
+  const data = error.data;
+  res
+    .status(status)
+    .json({ error: true, message: message, status: status, data: data });
 });
+
+try {
+  mongoose.connection.on("connected", () => {
+    console.log("Connected to Mongo Client!");
+    console.log("On Database: ", mongoose.connection.name);
+    app.listen(8000, () => {
+      console.log(`Server is running on http://localhost:8000`);
+    });
+  });
+  mongoose.connection.on("disconnected", () => {
+    console.log("disconnected");
+  });
+  await mongoose.connect(process.env.DATABASE_URL);
+} catch (error) {
+  console.log(error);
+}
