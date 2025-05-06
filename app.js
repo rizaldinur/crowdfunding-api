@@ -29,7 +29,7 @@ app.use((error, req, res, next) => {
   console.log(error);
   const status = error.statusCode || 500;
   const message =
-    error.statusCode === 500
+    error.statusCode === 500 && !error.message
       ? "Something went wrong. (Error 500)"
       : error.message;
   const data = error.data;
