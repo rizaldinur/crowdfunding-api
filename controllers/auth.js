@@ -8,7 +8,7 @@ config();
 
 export const login = async (req, res, next) => {
   try {
-    await new Promise((resolve, reject) => setTimeout(() => resolve(), 1500));
+    // await new Promise((resolve, reject) => setTimeout(() => resolve(), 1500));
     if (!req.body) {
       const error = new Error("Email atau password salah.");
       error.statusCode = 401;
@@ -32,13 +32,14 @@ export const login = async (req, res, next) => {
     const token = jwt.sign(
       { email: user.email, userId: user._id.toString() },
       process.env.JWT_SECRETKEY,
-      { expiresIn: "15m" }
+      { expiresIn: "15 minutes" }
     );
 
     res.status(200).json({
+      error: false,
       message: "Berhasil login",
-      token: token,
-      userId: user._id.toString(),
+      status: 201,
+      data: { token: token, userId: user._id.toString() },
     });
   } catch (error) {
     if (!error.statusCode) {
@@ -58,6 +59,7 @@ export const signup = async (req, res, next) => {
     if (userExists) {
       const error = new Error("Email sudah terdaftar.");
       error.statusCode = 422;
+      error.data = [{ body: "email" }];
       throw error;
     }
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -67,9 +69,73 @@ export const signup = async (req, res, next) => {
       password: hashedPassword,
     });
     await user.save();
-    res
-      .status(201)
-      .json({ message: "Berhasil mendaftarkan akun.", userId: user._id });
+    res.status(201).json({
+      error: false,
+      message: "Berhasil mendaftarkan akun.",
+      status: 201,
+      data: { userId: user._id },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const authJWT = async (req, res, next) => {
+  try {
+    // await new Promise((resolve, reject) => setTimeout(() => resolve(), 15000));
+    const authHeader = req.get("Authorization");
+    console.log(authHeader);
+
+    if (!authHeader) {
+      const error = new Error("Belum terautentikasi.");
+      error.data = { authenticated: false };
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const token = authHeader.split(" ")[1];
+    console.log(token);
+
+    if (!token) {
+      const error = new Error("Belum terautentikasi.");
+      error.data = { authenticated: false };
+      error.statusCode = 401;
+      throw error;
+    }
+    let decodedToken = jwt.verify(token, process.env.JWT_SECRETKEY);
+
+    if (!decodedToken) {
+      const error = new Error("Belum terautentikasi.");
+      error.data = { authenticated: false };
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const { email, userId, exp } = decodedToken;
+
+    let now = Math.floor(Date.now() / 1000);
+
+    let diffSeconds = exp - now;
+    let diffInMinutes = Math.floor(diffSeconds / 60);
+    console.log(diffInMinutes);
+
+    let refreshToken = null;
+    if (diffInMinutes > 0 && diffInMinutes < 5) {
+      refreshToken = jwt.sign(
+        { email: email, userId: userId },
+        process.env.JWT_SECRETKEY,
+        { expiresIn: "15 minutes" }
+      );
+    }
+    res.status(200).json({
+      error: false,
+      message: "Berhasil mengautentikasi.",
+      status: 201,
+      data: { authenticated: true, userId: userId, refreshToken: refreshToken },
+    });
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
