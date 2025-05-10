@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import authRoutes from "./routes/auth.js";
+import projectRoutes from "./routes/project.js";
 import mongoose from "mongoose";
 import { config } from "dotenv";
 
@@ -9,9 +10,7 @@ const app = express();
 
 app.use(bodyParser.json());
 
-app.post("/post-proof", (req, res, next) => {
-  res.json({ message: "success." });
-});
+app.use("/images", express.static("images"));
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -24,6 +23,7 @@ app.use((req, res, next) => {
 });
 
 app.use(authRoutes);
+app.use(projectRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);
