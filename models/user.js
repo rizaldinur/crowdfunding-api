@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import slugify from "slugify";
+
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema(
@@ -10,14 +12,33 @@ const userSchema = new Schema(
     email: {
       type: String,
       required: true,
+      unique: true,
     },
     password: {
       type: String,
       required: true,
     },
+    avatarUrl: { type: String },
+    biography: { type: String },
+    slug: { type: String, unique: true },
+    savedProjects: [{ type: mongoose.SchemaTypes.ObjectId, ref: "Project" }],
   },
   { timestamps: true }
 );
+
+userSchema.pre("validate", async function (next) {
+  let baseSlug = slugify(this.name, { lower: true, strict: true });
+  let slug = baseSlug;
+  let counter = 1;
+
+  // Ensure uniqueness
+  while (await mongoose.models.User.findOne({ slug })) {
+    slug = `${baseSlug}-${counter++}`;
+  }
+
+  this.slug = slug;
+  next();
+});
 
 const User = mongoose.model("User", userSchema);
 
