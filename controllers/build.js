@@ -95,3 +95,102 @@ export const postStartProject = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getOverviewBuild = async (req, res, next) => {
+  try {
+    console.log(req.params);
+    console.log(req.authData);
+    console.log(req.refreshToken);
+
+    if (!req.params?.profileId || !req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const { userId, slug } = req.authData;
+    const { profileId, projectId } = req.params;
+    if (slug !== profileId) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const project = await Project.findOne({
+      slug: projectId,
+      creator: new mongoose.Types.ObjectId(userId),
+    }).populate("creator");
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+    console.log(project._doc);
+
+    const story = project.story.toObject();
+    const basic = project.basic.toObject();
+    const payment = project.payment.toObject();
+    const profile = { slug: slug, biography: project.creator.biography };
+
+    let basicCountFilled = 0;
+    let basicTotal = 0;
+    for (const prop in basic) {
+      basicTotal++;
+      if (basic[prop]) {
+        basicCountFilled++;
+      }
+    }
+    console.log(basicTotal, basicCountFilled);
+
+    let storyCountFilled = 0;
+    let storyTotal = 0;
+    for (const prop in story) {
+      storyTotal++;
+      if (story[prop] && story[prop].length > 0) {
+        storyCountFilled++;
+      }
+    }
+    console.log(storyTotal, storyCountFilled);
+
+    let profileCountFilled = 0;
+    let profileTotal = 0;
+    for (const prop in profile) {
+      profileTotal++;
+      if (profile[prop]) {
+        profileCountFilled++;
+      }
+    }
+    console.log(profileTotal, profileCountFilled);
+
+    let paymentCountFilled = 0;
+    let paymentTotal = 0;
+    for (const prop in payment) {
+      paymentTotal++;
+      if (payment[prop]) {
+        paymentCountFilled++;
+      }
+    }
+    console.log(paymentTotal, paymentCountFilled);
+
+    res.status(200).json({
+      error: false,
+      message: "Berhasil mengambil data.",
+      status: 200,
+      data: {
+        authorized: true,
+        refreshToken: req.refreshToken,
+        basicProgress: (basicCountFilled / basicTotal) * 100,
+        storyProgress: (storyCountFilled / storyTotal) * 100,
+        profileProgress: (profileCountFilled / profileTotal) * 100,
+        paymentProgress: (paymentCountFilled / paymentTotal) * 100,
+        buildStatus: project.status,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};

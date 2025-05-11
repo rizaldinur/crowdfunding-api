@@ -4,6 +4,12 @@ import { isAuth } from "../middlewares/middlewares.js";
 
 const router = Router();
 
+router.get(
+  "/:profileId/:projectId/build-overview",
+  isAuth,
+  buildController.getOverviewBuild
+);
+
 router.post(
   "/start-project",
   isAuth,
