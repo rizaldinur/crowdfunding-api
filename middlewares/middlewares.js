@@ -26,6 +26,28 @@ export const isAuth = async (req, res, next) => {
       throw error;
     }
 
+    const { email, userId, exp, slug, avatar } = decodedToken;
+
+    let userData = {
+      email: email,
+      userId: userId,
+      slug: slug,
+      avatar: avatar,
+    };
+    let now = Math.floor(Date.now() / 1000);
+
+    let diffSeconds = exp - now;
+    let diffInMinutes = Math.floor(diffSeconds / 60);
+    console.log(diffInMinutes);
+
+    let refreshToken;
+    if (diffInMinutes > 0 && diffInMinutes < 5) {
+      refreshToken = jwt.sign(userData, process.env.JWT_SECRETKEY, {
+        expiresIn: "15 minutes",
+      });
+    }
+
+    req.refreshToken = refreshToken;
     req.authData = decodedToken;
     next();
   } catch (error) {
