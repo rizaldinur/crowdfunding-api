@@ -1,5 +1,5 @@
 import { Router } from "express";
-import * as projectController from "../controllers/project.js";
+import * as buildController from "../controllers/build.js";
 import { isAuth } from "../middlewares/middlewares.js";
 
 const router = Router();
@@ -7,8 +7,8 @@ const router = Router();
 router.post(
   "/start-project",
   isAuth,
-  projectController.uploadProof.single("file"),
-  projectController.postStartProject
+  buildController.uploadProof.single("file"),
+  buildController.postStartProject
 );
 
 export default router;

@@ -4,6 +4,7 @@ import path from "path";
 import Project from "../models/project.js";
 import { getBaseUrl } from "../utils/utils.js";
 import mongoose from "mongoose";
+import User from "../models/user.js";
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {

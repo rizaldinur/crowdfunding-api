@@ -1,7 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import authRoutes from "./routes/auth.js";
-import projectRoutes from "./routes/project.js";
+import buildRoutes from "./routes/build.js";
 import mongoose from "mongoose";
 import { config } from "dotenv";
 
@@ -23,7 +23,7 @@ app.use((req, res, next) => {
 });
 
 app.use(authRoutes);
-app.use(projectRoutes);
+app.use(buildRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);
