@@ -7,33 +7,21 @@ const projectSchema = new Schema(
     basic: {
       title: {
         type: String,
-        required: true,
-        default: "empty",
       },
       subTitle: {
         type: String,
-        required: true,
-        default: "empty",
       },
       category: {
         type: String,
-        required: true,
-        default: "empty",
       },
       location: {
         type: String,
-        required: true,
-        default: "empty",
       },
       imageUrl: {
         type: String,
-        required: true,
-        default: "empty",
       },
       fundTarget: {
         type: Number,
-        required: true,
-        default: 0,
       },
       launchDate: {
         type: Date,
@@ -45,18 +33,12 @@ const projectSchema = new Schema(
     story: {
       detail: {
         type: String,
-        required: true,
-        default: "empty",
       },
       benefits: {
         type: String,
-        required: true,
-        default: "empty",
       },
       chalenges: {
         type: String,
-        required: true,
-        default: "empty",
       },
       faqs: [
         {
@@ -66,18 +48,17 @@ const projectSchema = new Schema(
       ],
     },
     payment: {
-      businessType: { type: String, required: true, default: "empty" },
-      bankName: { type: String, required: true, default: "empty" },
-      bankAccountNumber: { type: String, required: true, default: "empty" },
+      businessType: { type: String },
+      bankName: { type: String },
+      bankAccountNumber: { type: String },
     },
     creator: {
       type: mongoose.SchemaTypes.ObjectId,
       ref: "User",
-      required: true,
     },
-    studentProofUrl: { type: String, required: true, default: "empty" },
+    studentProofUrl: { type: String },
     school: { type: String, default: "" },
-    otherSchool: { type: Boolean, default: false },
+    otherSchool: { type: Boolean, default: true },
     slug: { type: String, unique: true },
     funding: { type: Number, default: 0 },
     status: { type: String, default: "draft" },
