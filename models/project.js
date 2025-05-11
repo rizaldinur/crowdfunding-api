@@ -7,38 +7,48 @@ const projectSchema = new Schema(
     basic: {
       title: {
         type: String,
+        default: "",
       },
       subTitle: {
         type: String,
+        default: "",
       },
       category: {
         type: String,
+        default: "",
       },
       location: {
         type: String,
+        default: "",
       },
       imageUrl: {
         type: String,
+        default: "",
       },
       fundTarget: {
         type: Number,
+        default: 0,
       },
       launchDate: {
         type: Date,
       },
       endDate: {
         type: Date,
+        default: "",
       },
     },
     story: {
       detail: {
         type: String,
+        default: "",
       },
       benefits: {
         type: String,
+        default: "",
       },
       chalenges: {
         type: String,
+        default: "",
       },
       faqs: [
         {
@@ -48,9 +58,9 @@ const projectSchema = new Schema(
       ],
     },
     payment: {
-      businessType: { type: String },
-      bankName: { type: String },
-      bankAccountNumber: { type: String },
+      businessType: { type: String, default: "" },
+      bankName: { type: String, default: "" },
+      bankAccountNumber: { type: String, default: "" },
     },
     creator: {
       type: mongoose.SchemaTypes.ObjectId,
