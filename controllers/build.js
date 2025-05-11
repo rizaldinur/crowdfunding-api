@@ -11,7 +11,7 @@ const fileStorage = multer.diskStorage({
     (async () => {
       try {
         const slug = req.authData.slug;
-        const dir = path.join("images", "users", slug, "proof");
+        const dir = path.join("data", "users", slug, "proof");
 
         // Create directory if it doesn't exist
         await fs.mkdir(dir, { recursive: true });
@@ -58,23 +58,17 @@ export const uploadProof = multer({
 export const postStartProject = async (req, res, next) => {
   try {
     const { projectName, location, category, school, otherSchool } = req.body;
-    const { userId } = req.authData;
+    const { userId, slug } = req.authData;
     const filepath = path.join(req.dir, req.filename);
     const normalizedPath = filepath.replace(/\\/g, "/");
     const studentProofUrl = `${getBaseUrl(req)}/${normalizedPath}`;
-    console.log(req.body);
+    console.log(req.refreshToken);
 
     const project = new Project();
 
-    if (projectName) {
-      project.basic.title = projectName;
-    }
-    if (location) {
-      project.basic.location = location;
-    }
-    if (category) {
-      project.basic.category = category;
-    }
+    project.basic.title = projectName;
+    project.basic.location = location;
+    project.basic.category = category;
     project.school = school;
     project.otherSchool = otherSchool === "true" ? true : false;
     project.studentProofUrl = studentProofUrl;
@@ -90,7 +84,8 @@ export const postStartProject = async (req, res, next) => {
         projectId: project._id,
         projectSlug: project.slug,
         userId: userId,
-        userSlug: req.authData.slug,
+        userSlug: slug,
+        refreshToken: req.refreshToken,
       },
     });
   } catch (error) {
