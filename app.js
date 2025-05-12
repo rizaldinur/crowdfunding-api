@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import authRoutes from "./routes/auth.js";
 import buildRoutes from "./routes/build.js";
+import accountRoutes from "./routes/account.js";
 import mongoose from "mongoose";
 import { config } from "dotenv";
 
@@ -25,6 +26,7 @@ app.use((req, res, next) => {
 
 app.use(authRoutes);
 app.use(buildRoutes);
+app.use(accountRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);
