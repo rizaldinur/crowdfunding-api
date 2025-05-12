@@ -71,3 +71,26 @@ export const getProfileHeader = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getProfileAbout = async (req, res, next) => {
+  try {
+    const { profileId } = req.params;
+    const profile =
+      (await User.findOne({ slug: profileId })) ||
+      (await User.findById(profileId));
+
+    res.status(200).json({
+      error: false,
+      message: "Success",
+      status: 200,
+      data: {
+        biography: profile.biography,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
