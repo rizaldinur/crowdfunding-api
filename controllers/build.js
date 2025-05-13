@@ -180,6 +180,8 @@ export const getOverviewBuild = async (req, res, next) => {
       data: {
         authorized: true,
         refreshToken: req.refreshToken,
+        projectName: project.name,
+        creatorName: project.creator.name,
         basicProgress: (basicCountFilled / basicTotal) * 100,
         storyProgress: (storyCountFilled / storyTotal) * 100,
         profileProgress: (profileCountFilled / profileTotal) * 100,
