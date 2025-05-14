@@ -129,9 +129,29 @@ export const getOverviewBuild = async (req, res, next) => {
     console.log(project._doc);
 
     const story = project.story.toObject();
-    const basic = project.basic.toObject();
+    const oldBasic = project.basic.toObject();
     const payment = project.payment.toObject();
     const profile = { slug: slug, biography: project.creator.biography };
+
+    const {
+      title,
+      subTitle,
+      category,
+      location,
+      imageUrl,
+      fundTarget,
+      duration,
+    } = oldBasic;
+
+    const basic = {
+      title,
+      subTitle,
+      category,
+      location,
+      imageUrl,
+      fundTarget,
+      duration,
+    };
 
     let basicCountFilled = 0;
     let basicTotal = 0;
@@ -180,13 +200,75 @@ export const getOverviewBuild = async (req, res, next) => {
       data: {
         authorized: true,
         refreshToken: req.refreshToken,
-        projectName: project.name,
+        projectName: project.basic.title,
         creatorName: project.creator.name,
         basicProgress: (basicCountFilled / basicTotal) * 100,
         storyProgress: (storyCountFilled / storyTotal) * 100,
         profileProgress: (profileCountFilled / profileTotal) * 100,
         paymentProgress: (paymentCountFilled / paymentTotal) * 100,
         buildStatus: project.status,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const postBuildBasic = async (req, res, next) => {
+  try {
+    console.log(req.authData, req.refreshToken);
+    if (!req.params?.profileId || !req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const { profileId, projectId } = req.params;
+    const { userId, slug } = req.authData;
+
+    if (slug !== profileId && userId !== profileId) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    console.log(req.body);
+    const project =
+      (await Project.findOne({ slug: projectId })) ||
+      (await Project.findById(projectId));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    project.basic.title = req.body.title;
+    project.basic.subTitle = req.body.subtitle;
+    project.basic.category = req.body.category;
+    project.basic.location = req.body.location;
+    project.basic.imageUrl = req.body.imageUrl;
+    project.basic.fundTarget = Number(req.body.fundTarget);
+
+    project.basic.launchDate = req.body.launchDate
+      ? new Date(req.body.launchDate)
+      : null;
+
+    project.basic.duration = Number(req.body.duration);
+
+    await project.save();
+
+    res.status(201).json({
+      error: false,
+      message: "Berhasil menyimpan perubahan.",
+      data: {
+        authorized: true,
+        projectId: project._id,
+        projectSlug: project.slug,
       },
     });
   } catch (error) {
