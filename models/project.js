@@ -32,9 +32,9 @@ const projectSchema = new Schema(
       launchDate: {
         type: Date,
       },
-      endDate: {
-        type: Date,
-        default: "",
+      duration: {
+        type: Number,
+        default: 0,
       },
     },
     story: {
@@ -89,11 +89,16 @@ projectSchema.pre("validate", async function (next) {
 
   let baseSlug = slugify(this.basic.title, { lower: true, strict: true });
   let slug = baseSlug;
-  let counter = 1;
 
-  // Ensure uniqueness
-  while (await mongoose.models.Project.findOne({ slug })) {
-    slug = `${baseSlug}-${counter++}`;
+  let existing = await mongoose.models.Project.findOne({ slug });
+
+  if (existing && existing._id.toString() !== this._id.toString()) {
+    let counter = 1;
+    // Ensure uniqueness
+    while (await mongoose.models.Project.findOne({ slug })) {
+      counter++;
+    }
+    slug = `${baseSlug}-${counter}`;
   }
 
   this.slug = slug;
