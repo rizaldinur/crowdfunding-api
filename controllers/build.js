@@ -220,9 +220,16 @@ export const getOverviewBuild = async (req, res, next) => {
 export const getBuildPageData = async (req, res, next) => {
   try {
     console.log(req.authData, req.refreshToken, req.params);
-    if (!req.params?.profileId || !req.params?.projectId) {
+    if (!req.params?.profileId || !req.params?.projectId || !req.params?.page) {
       const error = new Error("URL paremeters invalid.");
       error.statusCode = 400;
+      throw error;
+    }
+
+    const pageMap = ["basic", "story", "profile", "payment"];
+    if (!pageMap.includes(req.params.page)) {
+      const error = new Error("Page not found.");
+      error.statusCode = 404;
       throw error;
     }
 
