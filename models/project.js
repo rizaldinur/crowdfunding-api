@@ -36,6 +36,9 @@ const projectSchema = new Schema(
         type: Number,
         default: 0,
       },
+      endDate: {
+        type: Date,
+      },
     },
     story: {
       detail: {
@@ -46,7 +49,7 @@ const projectSchema = new Schema(
         type: String,
         default: "",
       },
-      chalenges: {
+      challenges: {
         type: String,
         default: "",
       },
