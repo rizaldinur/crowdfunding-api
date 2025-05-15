@@ -9,6 +9,11 @@ router.get(
   isAuth,
   buildController.getOverviewBuild
 );
+router.get(
+  "/:profileId/:projectId/build/:page",
+  isAuth,
+  buildController.getBuildPageData
+);
 
 router.post(
   "/start-project",

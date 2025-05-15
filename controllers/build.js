@@ -217,12 +217,78 @@ export const getOverviewBuild = async (req, res, next) => {
   }
 };
 
-export const postBuildBasic = async (req, res, next) => {
+export const getBuildPageData = async (req, res, next) => {
   try {
-    console.log(req.authData, req.refreshToken);
+    console.log(req.authData, req.refreshToken, req.params);
     if (!req.params?.profileId || !req.params?.projectId) {
       const error = new Error("URL paremeters invalid.");
       error.statusCode = 400;
+      throw error;
+    }
+
+    const { profileId, projectId } = req.params;
+    const { userId, slug } = req.authData;
+
+    if (slug !== profileId && userId !== profileId) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const project =
+      (await Project.findOne({ slug: projectId })) ||
+      (await Project.findById(projectId));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const basic = req.params.page === "basic" ? project.basic : undefined;
+    const story = req.params.page === "story" ? project.story : undefined;
+    const profile =
+      req.params.page === "profile" ? project.creator._doc : undefined;
+    const payment = req.params.page === "payment" ? project.payment : undefined;
+
+    res.status(200).json({
+      error: false,
+      message: "Berhasil mengambil data.",
+      data: {
+        authorized: true,
+        refreshToken: req.refreshToken,
+        basic,
+        story,
+        profile,
+        payment,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const postBuildBasic = async (req, res, next) => {
+  try {
+    console.log(req.authData, req.refreshToken);
+    if (!req.params?.profileId || !req.params?.projectId || !req.params?.page) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (
+      req.params.page !== "build" ||
+      req.params.page !== "story" ||
+      req.params.page !== "profile" ||
+      req.params.page !== "payment"
+    ) {
+      const error = new Error("Page not found.");
+      error.statusCode = 404;
       throw error;
     }
 
@@ -267,8 +333,10 @@ export const postBuildBasic = async (req, res, next) => {
       message: "Berhasil menyimpan perubahan.",
       data: {
         authorized: true,
+        refreshToken: req.refreshToken,
         projectId: project._id,
         projectSlug: project.slug,
+        basic: project.basic,
       },
     });
   } catch (error) {
