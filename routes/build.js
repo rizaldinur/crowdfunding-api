@@ -21,10 +21,10 @@ router.post(
   buildController.uploadProof.single("file"),
   buildController.postStartProject
 );
-router.post(
-  "/:profileId/:projectId/build/basic",
+router.put(
+  "/:profileId/:projectId/build/:page",
   isAuth,
-  buildController.postBuildBasic
+  buildController.putBuildForm
 );
 
 export default router;

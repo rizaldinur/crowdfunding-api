@@ -279,21 +279,17 @@ export const getBuildPageData = async (req, res, next) => {
   }
 };
 
-export const postBuildBasic = async (req, res, next) => {
+export const putBuildForm = async (req, res, next) => {
   try {
-    console.log(req.authData, req.refreshToken);
-    if (!req.params?.profileId || !req.params?.projectId || !req.params?.page) {
+    console.log(req.authData, req.refreshToken, req.params);
+    if (!req.params?.profileId || !req.params?.projectId) {
       const error = new Error("URL paremeters invalid.");
       error.statusCode = 400;
       throw error;
     }
 
-    if (
-      req.params.page !== "build" ||
-      req.params.page !== "story" ||
-      req.params.page !== "profile" ||
-      req.params.page !== "payment"
-    ) {
+    const pageMap = ["basic", "story", "profile", "payment"];
+    if (!pageMap.includes(req.params.page)) {
       const error = new Error("Page not found.");
       error.statusCode = 404;
       throw error;
@@ -320,20 +316,49 @@ export const postBuildBasic = async (req, res, next) => {
       throw error;
     }
 
-    project.basic.title = req.body.title;
-    project.basic.subTitle = req.body.subtitle;
-    project.basic.category = req.body.category;
-    project.basic.location = req.body.location;
-    project.basic.imageUrl = req.body.imageUrl;
-    project.basic.fundTarget = Number(req.body.fundTarget);
+    let basic;
+    if (req.params.page === "basic") {
+      project.basic.title = req.body.title;
+      project.basic.subTitle = req.body.subtitle;
+      project.basic.category = req.body.category;
+      project.basic.location = req.body.location;
+      project.basic.imageUrl = req.body.imageUrl;
+      project.basic.fundTarget = Number(req.body.fundTarget);
 
-    project.basic.launchDate = req.body.launchDate
-      ? new Date(req.body.launchDate)
-      : null;
+      project.basic.launchDate = req.body.launchDate
+        ? new Date(req.body.launchDate)
+        : null;
 
-    project.basic.duration = Number(req.body.duration);
+      project.basic.duration = Number(req.body.duration);
+      if (project.basic?.duration > 0) {
+        const afterDays = project.basic.launchDate
+          ? new Date(project.basic.launchDate)
+          : null;
+        afterDays.setDate(afterDays.getDate() + project.basic.duration);
+        project.basic.endDate = afterDays;
+      }
 
-    await project.save();
+      await project.save();
+      basic = project.basic;
+    }
+
+    let story;
+    if (req.params.page === "story") {
+      project.story.detail = req.body.detail;
+      project.story.benefits = req.body.benefits;
+      project.story.challenges = req.body.challenges;
+
+      const parsedFaqs = JSON.parse(req.body.faqs);
+      if (parsedFaqs.length > 0) {
+        let filledFaqs = parsedFaqs.filter((faq) => {
+          return faq.question !== "" || faq.answer !== "";
+        });
+        project.story.faqs = filledFaqs;
+      }
+
+      await project.save();
+      story = project.story;
+    }
 
     res.status(201).json({
       error: false,
@@ -343,7 +368,8 @@ export const postBuildBasic = async (req, res, next) => {
         refreshToken: req.refreshToken,
         projectId: project._id,
         projectSlug: project.slug,
-        basic: project.basic,
+        basic,
+        story,
       },
     });
   } catch (error) {
