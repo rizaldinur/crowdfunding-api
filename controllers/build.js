@@ -3,15 +3,20 @@ import fs from "node:fs/promises";
 import path from "path";
 import Project from "../models/project.js";
 import { getBaseUrl } from "../utils/utils.js";
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 import User from "../models/user.js";
+import jwt from "jsonwebtoken";
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     (async () => {
       try {
-        const slug = req.authData.slug;
-        const dir = path.join("data", "users", slug, "proof");
+        const project = new Project();
+        await project.save();
+
+        const userId = req.authData.userId;
+        const projectId = project._id.toString();
+        const dir = path.join("data", "users", userId, projectId, "proof");
 
         // Create directory if it doesn't exist
         await fs.mkdir(dir, { recursive: true });
@@ -27,6 +32,7 @@ const fileStorage = multer.diskStorage({
         }
 
         // Finally call the callback with the directory path
+        req.project = project;
         req.dir = dir;
         cb(null, dir);
       } catch (err) {
@@ -58,21 +64,23 @@ export const uploadProof = multer({
 export const postStartProject = async (req, res, next) => {
   try {
     const { projectName, location, category, school, otherSchool } = req.body;
+    const project = req.project;
     const { userId, slug } = req.authData;
     const filepath = path.join(req.dir, req.filename);
     const normalizedPath = filepath.replace(/\\/g, "/");
     const studentProofUrl = `${getBaseUrl(req)}/${normalizedPath}`;
     console.log(req.refreshToken);
 
-    const project = new Project();
+    console.log(project instanceof Project);
 
+    // const project = new Project();
     project.basic.title = projectName;
     project.basic.location = location;
     project.basic.category = category;
     project.school = school;
     project.otherSchool = otherSchool === "true" ? true : false;
-    project.studentProofUrl = studentProofUrl;
     project.creator = new mongoose.Types.ObjectId(userId);
+    project.studentProofUrl = studentProofUrl;
 
     await project.save();
 
@@ -116,10 +124,11 @@ export const getOverviewBuild = async (req, res, next) => {
       throw error;
     }
 
-    const project = await Project.findOne({
-      slug: projectId,
-      creator: new mongoose.Types.ObjectId(userId),
-    }).populate("creator");
+    const project =
+      (await Project.findOne({
+        slug: projectId,
+        creator: new mongoose.Types.ObjectId(userId),
+      }).populate("creator")) || (await Project.findById(projectId));
 
     if (!project) {
       const error = new Error("Project not found.");
@@ -328,8 +337,10 @@ export const putBuildForm = async (req, res, next) => {
 
     console.log(req.body);
     const project =
-      (await Project.findOne({ slug: projectId })) ||
-      (await Project.findById(projectId));
+      (await Project.findOne({
+        slug: projectId,
+        creator: new mongoose.Types.ObjectId(userId),
+      })) || (await Project.findById(projectId));
 
     if (!project) {
       const error = new Error("Project not found.");
@@ -351,7 +362,7 @@ export const putBuildForm = async (req, res, next) => {
         : null;
 
       project.basic.duration = Number(req.body.duration);
-      if (project.basic?.duration > 0) {
+      if (project.basic?.duration > 0 && project.basic.launchDate) {
         const afterDays = project.basic.launchDate
           ? new Date(project.basic.launchDate)
           : null;
@@ -381,16 +392,49 @@ export const putBuildForm = async (req, res, next) => {
       story = project.story;
     }
 
+    let profile;
+    let refreshToken = req.refreshToken;
+    if (req.params.page === "profile") {
+      const data = await User.findById(userId);
+      data.slug = req.body.slug;
+      await data.save();
+      profile = {
+        _id: data._id,
+        slug: data.slug,
+      };
+      const userData = {
+        email: data.email,
+        userId: data._id.toString(),
+        slug: data.slug,
+        avatar: data.avatarUrl,
+      };
+      const token = jwt.sign(userData, process.env.JWT_SECRETKEY, {
+        expiresIn: "15 minutes",
+      });
+      refreshToken = token;
+    }
+
+    let payment;
+    if (req.params.page === "payment") {
+      project.payment.businessType = req.body.businessType;
+      project.payment.bankName = req.body.bankName;
+      project.payment.bankAccountNumber = req.body.bankAccountNumber;
+      await project.save();
+      payment = project.payment;
+    }
+
     res.status(201).json({
       error: false,
       message: "Berhasil menyimpan perubahan.",
       data: {
         authorized: true,
-        refreshToken: req.refreshToken,
+        refreshToken: refreshToken,
         projectId: project._id,
         projectSlug: project.slug,
         basic,
         story,
+        profile,
+        payment,
       },
     });
   } catch (error) {
