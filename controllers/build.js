@@ -244,8 +244,11 @@ export const getBuildPageData = async (req, res, next) => {
     }
 
     const project =
-      (await Project.findOne({ slug: projectId })) ||
-      (await Project.findById(projectId));
+      (await Project.findOne({
+        slug: projectId,
+        creator: new mongoose.Types.ObjectId(userId),
+      }).populate("creator")) ||
+      (await Project.findById(projectId).populate("creator"));
 
     if (!project) {
       const error = new Error("Project not found.");
@@ -255,9 +258,27 @@ export const getBuildPageData = async (req, res, next) => {
 
     const basic = req.params.page === "basic" ? project.basic : undefined;
     const story = req.params.page === "story" ? project.story : undefined;
-    const profile =
-      req.params.page === "profile" ? project.creator._doc : undefined;
-    const payment = req.params.page === "payment" ? project.payment : undefined;
+    let profile;
+    if (req.params.page === "profile") {
+      const { _id, slug, avatarUrl, biography, name } = (await project).creator;
+      profile = {
+        _id,
+        slug,
+        name,
+        biography,
+        avatarUrl,
+      };
+    }
+
+    let payment;
+    if (req.params.page === "payment") {
+      const data = project.payment;
+      const { email } = project.creator.toObject();
+      payment = {
+        ...data,
+        email,
+      };
+    }
 
     res.status(200).json({
       error: false,
