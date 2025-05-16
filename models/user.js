@@ -27,7 +27,14 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("validate", async function (next) {
-  let baseSlug = slugify(this.name, { lower: true, strict: true });
+  if (!this.isModified("name") && !this.isModified("slug")) {
+    return next();
+  }
+
+  let baseSlug =
+    this.isModified("slug") && this.slug
+      ? slugify(this.slug, { lower: true, strict: true })
+      : slugify(this.name, { lower: true, strict: true });
   let slug = baseSlug;
   let counter = 1;
 
