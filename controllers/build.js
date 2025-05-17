@@ -6,6 +6,7 @@ import { getBaseUrl } from "../utils/utils.js";
 import mongoose, { mongo } from "mongoose";
 import User from "../models/user.js";
 import jwt from "jsonwebtoken";
+import { __rootDir } from "../app.js";
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -106,8 +107,6 @@ export const postStartProject = async (req, res, next) => {
 
 export const getOverviewBuild = async (req, res, next) => {
   try {
-    console.log(req.params);
-    console.log(req.authData);
     console.log(req.refreshToken);
 
     if (!req.params?.profileId || !req.params?.projectId) {
@@ -135,7 +134,6 @@ export const getOverviewBuild = async (req, res, next) => {
       error.statusCode = 400;
       throw error;
     }
-    console.log(project._doc);
 
     const story = project.story.toObject();
     const oldBasic = project.basic.toObject();
@@ -426,6 +424,7 @@ export const putBuildForm = async (req, res, next) => {
     res.status(201).json({
       error: false,
       message: "Berhasil menyimpan perubahan.",
+      status: 201,
       data: {
         authorized: true,
         refreshToken: refreshToken,
@@ -435,6 +434,69 @@ export const putBuildForm = async (req, res, next) => {
         story,
         profile,
         payment,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const deleteProject = async (req, res, next) => {
+  try {
+    if (!req.params?.profileId || !req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const { profileId, projectId } = req.params;
+    const { userId, slug } = req.authData;
+
+    if (slug !== profileId && userId !== profileId) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const project =
+      (await Project.findOne({
+        slug: projectId,
+        creator: new mongoose.Types.ObjectId(userId),
+      })) || (await Project.findById(projectId));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const title = project.basic.title;
+    const deletedProjectId = project._id;
+    const data = await project.deleteOne();
+    console.log(data);
+
+    const filepath = new URL(project.studentProofUrl).pathname;
+    const userDirPath = filepath.split(`/${deletedProjectId}`)[0];
+    const projectDirPath = filepath.split("/proof")[0];
+    const fullProjectPath = path.join(__rootDir, projectDirPath);
+    const fullUserDirPath = path.join(__rootDir, userDirPath);
+
+    await fs.rm(fullProjectPath, { recursive: true });
+    const files = await fs.readdir(fullUserDirPath);
+    if (files.length === 0) {
+      await fs.rmdir(fullUserDirPath);
+    }
+
+    res.status(202).json({
+      error: false,
+      message: `Proyek '${title ? title : "tanpa nama"}' berhasil dihapus.`,
+      status: 202,
+      data: {
+        authorized: true,
+        title,
       },
     });
   } catch (error) {

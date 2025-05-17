@@ -21,10 +21,17 @@ router.post(
   buildController.uploadProof.single("file"),
   buildController.postStartProject
 );
+
 router.put(
   "/:profileId/:projectId/build/:page",
   isAuth,
   buildController.putBuildForm
+);
+
+router.delete(
+  "/:profileId/:projectId/delete",
+  isAuth,
+  buildController.deleteProject
 );
 
 export default router;
