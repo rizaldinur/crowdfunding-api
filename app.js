@@ -5,6 +5,11 @@ import buildRoutes from "./routes/build.js";
 import accountRoutes from "./routes/account.js";
 import mongoose from "mongoose";
 import { config } from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+export const __rootDir = path.dirname(__filename);
 
 config();
 const app = express();
