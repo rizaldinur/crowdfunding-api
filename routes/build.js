@@ -9,6 +9,13 @@ router.get(
   isAuth,
   buildController.getOverviewBuild
 );
+
+router.get(
+  "/:profileId/:projectId/build-overview/preview",
+  isAuth,
+  buildController.getPreviewProjectData
+);
+
 router.get(
   "/:profileId/:projectId/build/:page",
   isAuth,

@@ -106,6 +106,90 @@ export const postStartProject = async (req, res, next) => {
   }
 };
 
+export const getPreviewProjectData = async (req, res, next) => {
+  try {
+    if (!req.params?.profileId || !req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const { userId, slug } = req.authData;
+    const { profileId, projectId } = req.params;
+    if (slug !== profileId) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const project =
+      (await Project.findOne({
+        slug: projectId,
+        creator: new mongoose.Types.ObjectId(userId),
+      }).populate("creator")) || (await Project.findById(projectId));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const newObject = project.toObject();
+    const headData = {
+      title: newObject.basic.title,
+      subtitle: newObject.basic.subTitle,
+      imageUrl: newObject.basic.imageUrl,
+      category: newObject.basic.category,
+      location: newObject.basic.location,
+      funding: newObject.funding,
+      fundTarget: newObject.basic.fundTarget,
+    };
+
+    // const story =
+    //   newObject.story.detail +
+    //   "\n\n# Keuntungan\n" +
+    //   newObject.story.benefits +
+    //   "\n\n# Risiko dan Tantangan\n" +
+    //   newObject.story.challenges;
+
+    let story = newObject.story.detail;
+    if (newObject.story.benefits.length > 0) {
+      story = story + "\n\n# Keuntungan\n" + newObject.story.benefits;
+    }
+    if (newObject.story.challenges.length > 0) {
+      story =
+        story + "\n\n# Risiko dan Tantangan\n" + newObject.story.challenges;
+    }
+    const tabsData = {
+      story,
+      creator: {
+        name: newObject.creator.name,
+        avatarUrl: newObject.creator.avatarUrl,
+        school: newObject.school,
+        biography: newObject.creator.biography,
+      },
+      faqs: newObject.story.faqs,
+    };
+
+    res.status(200).json({
+      error: false,
+      message: "Berhasil mengambil data.",
+      status: 200,
+      data: {
+        authorized: true,
+        refreshToken: req.refreshToken,
+        headData,
+        tabsData,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
 export const getOverviewBuild = async (req, res, next) => {
   try {
     console.log(req.refreshToken);
@@ -426,7 +510,7 @@ export const putReviewProject = async (req, res, next) => {
       message: "Berhasil mengirim proyek untuk ditinjau.",
       status: 201,
       data: {
-        proejctStatus: project.status,
+        projectStatus: project.status,
       },
     });
   } catch (error) {
