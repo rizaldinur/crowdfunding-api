@@ -305,13 +305,6 @@ export const putBuildForm = async (req, res, next) => {
         : null;
 
       project.basic.duration = Number(req.body.duration);
-      if (project.basic?.duration > 0 && project.basic.launchDate) {
-        const afterDays = project.basic.launchDate
-          ? new Date(project.basic.launchDate)
-          : null;
-        afterDays.setDate(afterDays.getDate() + project.basic.duration);
-        project.basic.endDate = afterDays;
-      }
 
       await project.save();
       basic = project.basic;

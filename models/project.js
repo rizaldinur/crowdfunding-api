@@ -74,7 +74,18 @@ const projectSchema = new Schema(
     otherSchool: { type: Boolean, default: true },
     slug: { type: String, unique: true },
     funding: { type: Number, default: 0 },
-    status: { type: String, default: "draft" },
+    status: {
+      type: String,
+      enum: [
+        "draft",
+        "onreview",
+        "accept",
+        "launching",
+        "oncampaign",
+        "finished",
+      ],
+      default: "draft",
+    },
   },
   { timestamps: true }
 );
@@ -105,6 +116,25 @@ projectSchema.pre("validate", async function (next) {
   }
 
   this.slug = slug;
+  next();
+});
+
+projectSchema.pre("save", async function (next) {
+  // if no launchdate or no duration, go next
+  if (
+    !this.basic.launchDate ||
+    this.basic.duration <= 0 ||
+    this.basic.duration == null
+  ) {
+    if (this.basic.endDate) {
+      this.basic.endDate = null;
+    }
+    return next();
+  }
+
+  const afterDays = new Date(this.basic.launchDate);
+  afterDays.setDate(afterDays.getDate() + this.basic.duration);
+  this.basic.endDate = afterDays;
   next();
 });
 
