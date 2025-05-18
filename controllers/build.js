@@ -145,13 +145,6 @@ export const getPreviewProjectData = async (req, res, next) => {
       fundTarget: newObject.basic.fundTarget,
     };
 
-    // const story =
-    //   newObject.story.detail +
-    //   "\n\n# Keuntungan\n" +
-    //   newObject.story.benefits +
-    //   "\n\n# Risiko dan Tantangan\n" +
-    //   newObject.story.challenges;
-
     let story = newObject.story.detail;
     if (newObject.story.benefits.length > 0) {
       story = story + "\n\n# Keuntungan\n" + newObject.story.benefits;
