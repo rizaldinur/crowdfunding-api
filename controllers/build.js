@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 import User from "../models/user.js";
 import jwt from "jsonwebtoken";
 import { __rootDir } from "../app.js";
-import { isBuildCompleted } from "../helper/build.js";
+import { countBuildFormFilled, isBuildCompleted } from "../helper/build.js";
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -136,70 +136,13 @@ export const getOverviewBuild = async (req, res, next) => {
       throw error;
     }
 
-    const story = project.story.toObject();
-    const oldBasic = project.basic.toObject();
-    const payment = project.payment.toObject();
-    const profile = { slug: slug, biography: project.creator.biography };
+    const { basicProgress, storyProgress, profileProgress, paymentProgress } =
+      countBuildFormFilled(project, slug);
 
-    const {
-      title,
-      subTitle,
-      category,
-      location,
-      imageUrl,
-      fundTarget,
-      duration,
-    } = oldBasic;
-
-    const basic = {
-      title,
-      subTitle,
-      category,
-      location,
-      imageUrl,
-      fundTarget,
-      duration,
-    };
-
-    let basicCountFilled = 0;
-    let basicTotal = 0;
-    for (const prop in basic) {
-      basicTotal++;
-      if (basic[prop]) {
-        basicCountFilled++;
-      }
+    if (project.status === "onreview" && !isBuildCompleted(project, slug)) {
+      project.status = "draft";
+      await project.save();
     }
-    console.log(basicTotal, basicCountFilled);
-
-    let storyCountFilled = 0;
-    let storyTotal = 0;
-    for (const prop in story) {
-      storyTotal++;
-      if (story[prop] && story[prop].length > 0) {
-        storyCountFilled++;
-      }
-    }
-    console.log(storyTotal, storyCountFilled);
-
-    let profileCountFilled = 0;
-    let profileTotal = 0;
-    for (const prop in profile) {
-      profileTotal++;
-      if (profile[prop]) {
-        profileCountFilled++;
-      }
-    }
-    console.log(profileTotal, profileCountFilled);
-
-    let paymentCountFilled = 0;
-    let paymentTotal = 0;
-    for (const prop in payment) {
-      paymentTotal++;
-      if (payment[prop]) {
-        paymentCountFilled++;
-      }
-    }
-    console.log(paymentTotal, paymentCountFilled);
 
     res.status(200).json({
       error: false,
@@ -210,10 +153,10 @@ export const getOverviewBuild = async (req, res, next) => {
         refreshToken: req.refreshToken,
         projectName: project.basic.title,
         creatorName: project.creator.name,
-        basicProgress: (basicCountFilled / basicTotal) * 100,
-        storyProgress: (storyCountFilled / storyTotal) * 100,
-        profileProgress: (profileCountFilled / profileTotal) * 100,
-        paymentProgress: (paymentCountFilled / paymentTotal) * 100,
+        basicProgress,
+        storyProgress,
+        profileProgress,
+        paymentProgress,
         projectStatus: project.status,
       },
     });
@@ -298,6 +241,7 @@ export const getBuildPageData = async (req, res, next) => {
         story,
         profile,
         payment,
+        projectStatus: project.status,
       },
     });
   } catch (error) {

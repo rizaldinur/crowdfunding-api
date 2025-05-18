@@ -1,4 +1,4 @@
-export function isBuildCompleted(project, slug) {
+export function countBuildFormFilled(project, slug) {
   const story = project.story.toObject();
   const oldBasic = project.basic.toObject();
   const payment = project.payment.toObject();
@@ -32,9 +32,7 @@ export function isBuildCompleted(project, slug) {
       basicCountFilled++;
     }
   }
-  if (basicCountFilled !== basicTotal) {
-    return false;
-  }
+  let basicProgress = (basicCountFilled / basicTotal) * 100;
 
   let storyCountFilled = 0;
   let storyTotal = 0;
@@ -44,9 +42,7 @@ export function isBuildCompleted(project, slug) {
       storyCountFilled++;
     }
   }
-  if (storyCountFilled !== storyTotal) {
-    return false;
-  }
+  let storyProgress = (storyCountFilled / storyTotal) * 100;
 
   let profileCountFilled = 0;
   let profileTotal = 0;
@@ -56,9 +52,7 @@ export function isBuildCompleted(project, slug) {
       profileCountFilled++;
     }
   }
-  if (profileCountFilled !== profileTotal) {
-    return false;
-  }
+  let profileProgress = (profileCountFilled / profileTotal) * 100;
 
   let paymentCountFilled = 0;
   let paymentTotal = 0;
@@ -68,7 +62,21 @@ export function isBuildCompleted(project, slug) {
       paymentCountFilled++;
     }
   }
-  if (paymentCountFilled !== paymentTotal) {
+  let paymentProgress = (paymentCountFilled / paymentTotal) * 100;
+
+  return { basicProgress, storyProgress, profileProgress, paymentProgress };
+}
+
+export function isBuildCompleted(project, slug) {
+  const { basicProgress, storyProgress, profileProgress, paymentProgress } =
+    countBuildFormFilled(project, slug);
+
+  if (
+    basicProgress !== 100 ||
+    storyProgress !== 100 ||
+    profileProgress !== 100 ||
+    paymentProgress !== 100
+  ) {
     return false;
   }
 
