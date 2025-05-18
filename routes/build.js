@@ -28,6 +28,12 @@ router.put(
   buildController.putBuildForm
 );
 
+router.put(
+  "/:profileId/:projectId/build-overview/review",
+  isAuth,
+  buildController.putReviewProject
+);
+
 router.delete(
   "/:profileId/:projectId/delete",
   isAuth,

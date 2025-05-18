@@ -3,10 +3,11 @@ import fs from "node:fs/promises";
 import path from "path";
 import Project from "../models/project.js";
 import { getBaseUrl } from "../utils/utils.js";
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 import User from "../models/user.js";
 import jwt from "jsonwebtoken";
 import { __rootDir } from "../app.js";
+import { isBuildCompleted } from "../helper/build.js";
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -213,7 +214,7 @@ export const getOverviewBuild = async (req, res, next) => {
         storyProgress: (storyCountFilled / storyTotal) * 100,
         profileProgress: (profileCountFilled / profileTotal) * 100,
         paymentProgress: (paymentCountFilled / paymentTotal) * 100,
-        buildStatus: project.status,
+        projectStatus: project.status,
       },
     });
   } catch (error) {
@@ -434,6 +435,61 @@ export const putBuildForm = async (req, res, next) => {
         story,
         profile,
         payment,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const putReviewProject = async (req, res, next) => {
+  try {
+    if (!req.params?.profileId || !req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const { profileId, projectId } = req.params;
+    const { userId, slug } = req.authData;
+
+    if (slug !== profileId && userId !== profileId) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const project =
+      (await Project.findOne({
+        slug: projectId,
+        creator: new mongoose.Types.ObjectId(userId),
+      }).populate("creator")) ||
+      (await Project.findById(projectId).populate("creator"));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!isBuildCompleted(project, slug)) {
+      const error = new Error("Proyek belum selesai dibuat.");
+      error.statusCode = 422;
+      throw error;
+    }
+
+    project.status = "onreview";
+    await project.save();
+
+    res.status(201).json({
+      error: false,
+      message: "Berhasil mengirim proyek untuk ditinjau.",
+      status: 201,
+      data: {
+        proejctStatus: project.status,
       },
     });
   } catch (error) {
