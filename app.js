@@ -48,47 +48,79 @@ app.use((error, req, res, next) => {
     .json({ error: true, message: message, status: status, data: data });
 });
 
+let newTask = nodeCron.createTask("* * * * *", async () => {
+  const now = new Date();
+  console.log(`CRON running every minute at ${now.toDateString()}`);
+  const resUpdateLaunching = await Project.updateMany(
+    {
+      status: "launching",
+      "basic.launchDate": {
+        $exists: true,
+        $ne: null,
+        $lte: now,
+        $gt: new Date(now.getTime() - 60 * 60 * 1000),
+      },
+    },
+    { $set: { status: "oncampaign" } }
+  );
+  console.log(resUpdateLaunching.matchedCount);
+  const resUpdateFinished = await Project.updateMany(
+    {
+      status: "oncampaign",
+      endDate: { $lt: now },
+    },
+    {
+      $set: { status: "finished" },
+    }
+  );
+  console.log(resUpdateFinished.matchedCount);
+});
+
 try {
   mongoose.connection.on("connected", () => {
     console.log("Connected to Mongo Client!");
     console.log("On Database: ", mongoose.connection.name);
-    nodeCron.schedule("* * * * *", async () => {
-      const now = new Date();
-      console.log(`CRON running every minute at ${now.toDateString()}`);
-
-      const resUpdateLaunching = await Project.updateMany(
-        {
-          status: "launching",
-          "basic.launchDate": {
-            $lte: now,
-            $gt: new Date(now.getTime() - 60 * 60 * 1000),
-          },
-        },
-        { $set: { status: "oncampaign" } }
-      );
-      console.log(resUpdateLaunching.matchedCount);
-
-      const resUpdateFinished = await Project.updateMany(
-        {
-          status: "oncampaign",
-          endDate: { $lt: now },
-        },
-        {
-          $set: { status: "finished" },
-        }
-      );
-
-      console.log(resUpdateFinished.matchedCount);
-    });
-
+    console.log(newTask.getStatus());
+    newTask.start();
     app.listen(8000, () => {
+      console.log(newTask.getStatus());
       console.log(`Server is running on http://localhost:8000`);
     });
   });
   mongoose.connection.on("disconnected", () => {
+    newTask.destroy();
+    console.log(newTask.getStatus());
     console.log("disconnected");
   });
   await mongoose.connect(process.env.DATABASE_URL);
 } catch (error) {
+  newTask.destroy();
+  console.log("Cron task destroyed:", newTask.getStatus());
   console.log(error);
 }
+
+process.on("SIGINT", () => {
+  console.log("Gracefully shutting down from SIGINT (Ctrl+C)");
+
+  console.log("Cron task status:", newTask.getStatus());
+  newTask.destroy();
+  console.log("Cron task destroyed:", newTask.getStatus());
+
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  console.log("Gracefully shutting down from SIGTERM");
+
+  newTask.destroy();
+  console.log("Cron task destroyed:", newTask.getStatus());
+
+  process.exit(0);
+});
+
+process.on("SIGUSR2", () => {
+  console.log("Nodemon restart detected. Cleaning up...");
+  process.kill(process.pid, "SIGTERM");
+  newTask.destroy();
+  console.log("Cron task destroyed:", newTask.getStatus());
+});
