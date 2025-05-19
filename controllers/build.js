@@ -230,6 +230,8 @@ export const getOverviewBuild = async (req, res, next) => {
         refreshToken: req.refreshToken,
         projectName: project.basic.title,
         creatorName: project.creator.name,
+        creatorSlug: project.creator.slug,
+        creatorAvatar: project.creator.avatarUrl,
         basicProgress,
         storyProgress,
         profileProgress,

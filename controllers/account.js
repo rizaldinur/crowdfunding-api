@@ -128,6 +128,8 @@ export const getProfileCreatedProjects = async (req, res, next) => {
         projectImage: project.basic.imageUrl,
         creatorAvatar: project.creator.avatarUrl,
         creatorName: project.creator.name,
+        launchDate: project.basic.launchDate,
+        endDate: project.basic.endDate,
         school: project.school,
         status: project.status,
         createdAt: project.createdAt.toLocaleDateString("id-ID", {
