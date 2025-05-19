@@ -41,6 +41,12 @@ router.put(
   buildController.putReviewProject
 );
 
+router.put(
+  "/:profileId/:projectId/build-overview/launch",
+  isAuth,
+  buildController.putLaunchProject
+);
+
 router.delete(
   "/:profileId/:projectId/delete",
   isAuth,

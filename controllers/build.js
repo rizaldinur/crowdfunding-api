@@ -235,6 +235,7 @@ export const getOverviewBuild = async (req, res, next) => {
         profileProgress,
         paymentProgress,
         projectStatus: project.status,
+        projectLaunchDate: project.basic.launchDate,
       },
     });
   } catch (error) {
@@ -506,6 +507,68 @@ export const putReviewProject = async (req, res, next) => {
         projectStatus: project.status,
       },
     });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const putLaunchProject = async (req, res, next) => {
+  try {
+    if (!req.params?.profileId || !req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const { profileId, projectId } = req.params;
+    const { userId, slug } = req.authData;
+
+    if (slug !== profileId && userId !== profileId) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const project =
+      (await Project.findOne({
+        slug: projectId,
+        creator: new mongoose.Types.ObjectId(userId),
+      }).populate("creator")) ||
+      (await Project.findById(projectId).populate("creator"));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (project.status === "accept") {
+      if (new Date(req.body.launchDate) <= new Date()) {
+        project.basic.launchDate = new Date();
+        project.status = "oncampaign";
+      } else {
+        project.status = "launching";
+      }
+      await project.save();
+
+      res.status(201).json({
+        error: false,
+        status: 201,
+        message: "Berhasil meluncurkan proyek.",
+        data: {
+          authorized: true,
+          projectLaunchDate: project.basic.launchDate,
+          projectStatus: project.status,
+        },
+      });
+    } else {
+      const error = new Error("Proyek belum selesai/sudah diluncurkan.");
+      error.statusCode = 422;
+      throw error;
+    }
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
