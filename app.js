@@ -7,6 +7,8 @@ import mongoose from "mongoose";
 import { config } from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import nodeCron from "node-cron";
+import Project from "./models/project.js";
 
 const __filename = fileURLToPath(import.meta.url);
 export const __rootDir = path.dirname(__filename);
@@ -50,6 +52,35 @@ try {
   mongoose.connection.on("connected", () => {
     console.log("Connected to Mongo Client!");
     console.log("On Database: ", mongoose.connection.name);
+    nodeCron.schedule("* * * * *", async () => {
+      const now = new Date();
+      console.log(`CRON running every minute at ${now.toDateString()}`);
+
+      const resUpdateLaunching = await Project.updateMany(
+        {
+          status: "launching",
+          "basic.launchDate": {
+            $lte: now,
+            $gt: new Date(now.getTime() - 60 * 60 * 1000),
+          },
+        },
+        { $set: { status: "oncampaign" } }
+      );
+      console.log(resUpdateLaunching.matchedCount);
+
+      const resUpdateFinished = await Project.updateMany(
+        {
+          status: "oncampaign",
+          endDate: { $lt: now },
+        },
+        {
+          $set: { status: "finished" },
+        }
+      );
+
+      console.log(resUpdateFinished.matchedCount);
+    });
+
     app.listen(8000, () => {
       console.log(`Server is running on http://localhost:8000`);
     });
