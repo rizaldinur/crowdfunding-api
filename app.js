@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import authRoutes from "./routes/auth.js";
 import buildRoutes from "./routes/build.js";
 import accountRoutes from "./routes/account.js";
+import feedRoutes from "./routes/feed.js";
 import mongoose from "mongoose";
 import { config } from "dotenv";
 import path from "path";
@@ -33,6 +34,7 @@ app.use((req, res, next) => {
 
 app.use(authRoutes);
 app.use(buildRoutes);
+app.use(feedRoutes);
 app.use(accountRoutes);
 
 app.use((error, req, res, next) => {
@@ -58,7 +60,7 @@ let newTask = nodeCron.createTask("* * * * *", async () => {
         $exists: true,
         $ne: null,
         $lte: now,
-        $gt: new Date(now.getTime() - 60 * 60 * 1000),
+        $gt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
       },
     },
     { $set: { status: "oncampaign" } }
@@ -67,7 +69,11 @@ let newTask = nodeCron.createTask("* * * * *", async () => {
   const resUpdateFinished = await Project.updateMany(
     {
       status: "oncampaign",
-      endDate: { $lt: now },
+      "basic.endDate": {
+        $exists: true,
+        $ne: null,
+        $lte: now,
+      },
     },
     {
       $set: { status: "finished" },
