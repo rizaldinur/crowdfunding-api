@@ -43,7 +43,9 @@ export const getProjectHeader = async (req, res, next) => {
     const msInDay = 1000 * 60 * 60 * 24;
 
     const daysLeft = Math.round((end - launch) / msInDay);
-
+    const fundingProgress = Math.round(
+      (newObject.funding / newObject.basic.fundTarget) * 100
+    );
     res.status(200).json({
       error: false,
       message: "Berhasil mengambil data.",
@@ -59,6 +61,7 @@ export const getProjectHeader = async (req, res, next) => {
         funding: newObject.funding,
         fundTarget: newObject.basic.fundTarget,
         daysLeft,
+        fundingProgress,
       },
     });
   } catch (error) {
