@@ -5,7 +5,7 @@ import * as feedController from "../controllers/feed.js";
 const router = Router();
 
 router.get(
-  "/project/details/:profileId/:projectId/header", //optional
+  "/project/details/:profileId/:projectId/header",
   feedController.getProjectHeader
 );
 

@@ -103,8 +103,8 @@ export const getProjectDetails = async (req, res, next) => {
       throw error;
     }
 
-    let tabsData;
-
+    const newObject = project.toObject();
+    let tabData;
     if (page === "story") {
       let story = newObject.story.detail;
       if (newObject.story.benefits.length > 0) {
@@ -136,8 +136,7 @@ export const getProjectDetails = async (req, res, next) => {
       data: {
         authorized: true,
         refreshToken: req.refreshToken,
-        headData,
-        tabsData,
+        ...tabData,
       },
     });
   } catch (error) {
