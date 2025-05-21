@@ -37,12 +37,23 @@ export const getProjectHeader = async (req, res, next) => {
     }
 
     const newObject = project.toObject();
-    const launch = newObject.basic.launchDate;
+    const now = new Date();
     const end = newObject.basic.endDate;
 
     const msInDay = 1000 * 60 * 60 * 24;
+    const msInHours = 1000 * 60 * 60;
 
-    const daysLeft = Math.round((end - launch) / msInDay);
+    let timeFormat;
+    let timeLeft;
+    const daysLeft = Math.floor((end - now) / msInDay);
+    if (daysLeft >= 1) {
+      timeLeft = daysLeft;
+      timeFormat = "hari";
+    } else {
+      timeLeft = Math.floor((end - now) / msInHours);
+      timeFormat = "jam";
+    }
+
     const fundingProgress = Math.round(
       (newObject.funding / newObject.basic.fundTarget) * 100
     );
@@ -60,7 +71,9 @@ export const getProjectHeader = async (req, res, next) => {
         location: newObject.basic.location,
         funding: newObject.funding,
         fundTarget: newObject.basic.fundTarget,
-        daysLeft,
+        projectStatus: newObject.status,
+        timeLeft,
+        timeFormat,
         fundingProgress,
       },
     });
