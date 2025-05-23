@@ -2,6 +2,74 @@ import mongoose from "mongoose";
 import Project from "../models/project.js";
 import User from "../models/user.js";
 
+export const getFeaturedProject = async (req, res, next) => {
+  try {
+    const project = await Project.findOne()
+      .sort({
+        "basic.launchDate": "desc",
+      })
+      .populate("creator");
+
+    const title = project.basic.title;
+    const subtitle = project.basic.subtitle;
+    const imageUrl = project.basic.imageUrl;
+    const creator = project.creator.name;
+    const creatorSlug = project.creator.slug;
+    const projectSlug = project.slug;
+    const avatar = project.creator.avatarUrl;
+    const fundingProgress = Math.floor(
+      (project.funding / project.basic.fundTarget) * 100
+    );
+    const location = project.basic.location;
+    const category = project.basic.category;
+
+    const now = new Date();
+    const end = project.basic.endDate;
+    const msInDay = 1000 * 60 * 60 * 24;
+    const msInHours = 1000 * 60 * 60;
+
+    let timeFormat;
+    let timeLeft;
+    const daysLeft = Math.floor((end - now) / msInDay);
+    if (daysLeft >= 1) {
+      timeLeft = daysLeft;
+      timeFormat = "hari";
+    } else {
+      timeLeft = Math.floor((end - now) / msInHours);
+      timeFormat = "jam";
+    }
+
+    const featuredProject = {
+      creatorSlug,
+      projectSlug,
+      title,
+      subtitle,
+      imageUrl,
+      creator,
+      avatar,
+      fundingProgress,
+      location,
+      category,
+      timeLeft,
+      timeFormat,
+    };
+
+    res.status(200).json({
+      error: false,
+      status: 200,
+      message: "Berhasil mengambil data.",
+      data: {
+        featuredProject,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
 export const getProjectHeader = async (req, res, next) => {
   try {
     if (!req.params?.profileId || !req.params?.projectId) {
