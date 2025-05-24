@@ -4,7 +4,7 @@ import User from "../models/user.js";
 
 export const getFeaturedProject = async (req, res, next) => {
   try {
-    const project = await Project.findOne()
+    const project = await Project.findOne({ status: "oncampaign" })
       .sort({
         "basic.launchDate": "desc",
       })
