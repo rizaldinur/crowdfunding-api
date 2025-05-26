@@ -4,6 +4,7 @@ import authRoutes from "./routes/auth.js";
 import buildRoutes from "./routes/build.js";
 import accountRoutes from "./routes/account.js";
 import feedRoutes from "./routes/feed.js";
+import supportRoutes from "./routes/support.js";
 import mongoose from "mongoose";
 import { config } from "dotenv";
 import path from "path";
@@ -36,6 +37,7 @@ app.use(authRoutes);
 app.use(buildRoutes);
 app.use(feedRoutes);
 app.use(accountRoutes);
+app.use(supportRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);
