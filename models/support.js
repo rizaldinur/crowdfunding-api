@@ -15,7 +15,13 @@ const supportSchema = new Schema(
       required: true,
     },
     supportAmount: { type: Number, required: true, default: 0 },
-    status: { type: String, default: "pending" },
+    transaction: {
+      token: { type: String },
+      id: { type: String },
+      statusCode: { type: String },
+      status: { type: String },
+      expiryTime: { type: Date },
+    },
   },
   { timestamps: true }
 );
