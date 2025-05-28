@@ -11,11 +11,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodeCron from "node-cron";
 import Project from "./models/project.js";
+import Support from "./models/support.js";
+import Midtrans from "midtrans-client";
 
 const __filename = fileURLToPath(import.meta.url);
 export const __rootDir = path.dirname(__filename);
 
 config();
+export const snap = new Midtrans.Snap({
+  isProduction: false,
+  serverKey: process.env.MIDTRANS_SERVER_KEY,
+  clientKey: process.env.MIDTRANS_CLIENT_KEY,
+});
 const app = express();
 
 app.use(bodyParser.json());
@@ -82,6 +89,33 @@ let newTask = nodeCron.createTask("* * * * *", async () => {
     }
   );
   console.log(resUpdateFinished.matchedCount);
+
+  const supports = await Support.find({
+    "transaction.status": "pending",
+    "transaction.expiryTime": {
+      $exists: true,
+      $ne: null,
+      $lte: now,
+    },
+  });
+
+  let countUpdateSupport = 0;
+  await Promise.allSettled(
+    supports.map(async (support) => {
+      try {
+        const snapStatus = await snap.transaction.status(
+          support._id.toString()
+        );
+        support.transaction.statusCode = snapStatus.status_code;
+        support.transaction.status = snapStatus.transaction_status;
+        await support.save();
+        countUpdateSupport++;
+      } catch (err) {
+        console.error(`Error updating Support ${support._id}:`, err);
+      }
+    })
+  );
+  console.log(countUpdateSupport);
 });
 
 try {
