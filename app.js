@@ -24,7 +24,7 @@ app.use("/images", express.static("images"));
 app.use("/data", express.static("data"));
 
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", process.env.CLIENT_ORIGIN_URL);
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") {
