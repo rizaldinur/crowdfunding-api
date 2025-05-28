@@ -59,64 +59,70 @@ app.use((error, req, res, next) => {
     .json({ error: true, message: message, status: status, data: data });
 });
 
-let newTask = nodeCron.createTask("* * * * *", async () => {
-  const now = new Date();
-  console.log(`CRON running every minute at ${now.toDateString()}`);
-  const resUpdateLaunching = await Project.updateMany(
-    {
-      status: "launching",
-      "basic.launchDate": {
-        $exists: true,
-        $ne: null,
-        $lte: now,
-        $gt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+let newTask = nodeCron.createTask(
+  "* * * * *",
+  async () => {
+    const now = new Date();
+    console.log(`CRON running every minute at ${now.toISOString()}`);
+    const resUpdateLaunching = await Project.updateMany(
+      {
+        status: "launching",
+        "basic.launchDate": {
+          $exists: true,
+          $ne: null,
+          $lte: now,
+          $gt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+        },
       },
-    },
-    { $set: { status: "oncampaign" } }
-  );
-  console.log(resUpdateLaunching.matchedCount);
-  const resUpdateFinished = await Project.updateMany(
-    {
-      status: "oncampaign",
-      "basic.endDate": {
-        $exists: true,
-        $ne: null,
-        $lte: now,
+      { $set: { status: "oncampaign" } }
+    );
+    console.log(resUpdateLaunching.matchedCount);
+    const resUpdateFinished = await Project.updateMany(
+      {
+        status: "oncampaign",
+        "basic.endDate": {
+          $exists: true,
+          $ne: null,
+          $lte: now,
+        },
       },
-    },
-    {
-      $set: { status: "finished" },
-    }
-  );
-  console.log(resUpdateFinished.matchedCount);
-
-  const supports = await Support.find({
-    "transaction.status": "pending",
-    "transaction.expiryTime": {
-      $exists: true,
-      $ne: null,
-      $lte: now,
-    },
-  });
-
-  let countUpdateSupport = 0;
-  await Promise.allSettled(
-    supports.map(async (support) => {
-      try {
-        const snapStatus = await snap.transaction.status(
-          support._id.toString()
-        );
-        support.transaction.statusCode = snapStatus.status_code;
-        support.transaction.status = snapStatus.transaction_status;
-        await support.save();
-        countUpdateSupport++;
-      } catch (err) {
-        console.error(`Error updating Support ${support._id}:`, err);
+      {
+        $set: { status: "finished" },
       }
-    })
-  );
-  console.log(countUpdateSupport);
-});
+    );
+    console.log(resUpdateFinished.matchedCount);
+
+    const supports = await Support.find({
+      "transaction.status": "pending",
+      "transaction.expiryTime": {
+        $exists: true,
+        $ne: null,
+        $lte: now,
+      },
+    });
+
+    let countUpdateSupport = 0;
+    await Promise.allSettled(
+      supports.map(async (support) => {
+        try {
+          const snapStatus = await snap.transaction.status(
+            support._id.toString()
+          );
+          support.transaction.statusCode = snapStatus.status_code;
+          support.transaction.status = snapStatus.transaction_status;
+          await support.save();
+          countUpdateSupport++;
+        } catch (err) {
+          console.error(`Error updating Support ${support._id}:`, err);
+        }
+      })
+    );
+    console.log(countUpdateSupport);
+  },
+  {
+    timezone: "UTC",
+  }
+);
 
 try {
   mongoose.connection.on("connected", () => {
