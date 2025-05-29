@@ -65,6 +65,70 @@ export const getSupportOverviewData = async (req, res, next) => {
   }
 };
 
+export const getSupportStatus = async (req, res, next) => {
+  try {
+    if (!req.query?.order_id) {
+      const error = new Error("Search parameter required.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const { order_id } = req.query;
+    const support = await Support.findById(order_id).populate(
+      "supporter supportedProject"
+    );
+
+    if (!support) {
+      const error = new Error("Data not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const project = await Project.findById(support.supportedProject)
+      .select("creator")
+      .populate("creator");
+    console.log(project);
+
+    const { userId, slug } = req.authData;
+
+    if (!support.supporter._id.equals(userId)) {
+      const error = new Error("Unauthorized.");
+      error.data = { authorized: false };
+      error.statusCode = 401;
+      throw error;
+    }
+    const { supporter } = support.toObject();
+    const { supportedProject } = support.toObject();
+    const { creator } = project.toObject();
+
+    res.status(200).json({
+      error: false,
+      message: "OK",
+      status: 200,
+      data: {
+        authorized: true,
+        refreshToken: req.refreshToken,
+        supportId: support._id,
+        supporterSlug: supporter.slug,
+        supporterAvatar: supporter.avatar,
+        projectSlug: supportedProject.slug,
+        imageUrl: supportedProject.basic.imageUrl,
+        creatorSlug: creator.slug,
+        creatorName: creator.name,
+        supportAmount: support.supportAmount,
+        transactionStatus: support.transaction.status,
+        transactionToken: support.transaction.token,
+        expiryTime: support.transaction.expiryTime,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
 export const postSupportProject = async (req, res, next) => {
   try {
     if (!req.params?.profileId || !req.params?.projectId) {

@@ -10,6 +10,8 @@ router.get(
   supportController.getSupportOverviewData
 );
 
+router.get("/support/status", isAuth, supportController.getSupportStatus);
+
 router.post(
   "/support/:profileId/:projectId/checkout",
   isAuth,
