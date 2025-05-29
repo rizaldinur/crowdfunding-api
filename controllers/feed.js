@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Project from "../models/project.js";
 import User from "../models/user.js";
+import Support from "../models/support.js";
 
 export const getFeaturedProject = async (req, res, next) => {
   try {
@@ -126,50 +127,6 @@ export const getRecommendedProjects = async (req, res, next) => {
       return recommendedProject;
     });
 
-    // const title = project.basic.title;
-    // const subtitle = project.basic.subtitle;
-    // const imageUrl = project.basic.imageUrl;
-    // const creator = project.creator.name;
-    // const creatorSlug = project.creator.slug;
-    // const projectSlug = project.slug;
-    // const avatar = project.creator.avatarUrl;
-    // const fundingProgress = Math.floor(
-    //   (project.funding / project.basic.fundTarget) * 100
-    // );
-    // const location = project.basic.location;
-    // const category = project.basic.category;
-
-    // const now = new Date();
-    // const end = project.basic.endDate;
-    // const msInDay = 1000 * 60 * 60 * 24;
-    // const msInHours = 1000 * 60 * 60;
-
-    // let timeFormat;
-    // let timeLeft;
-    // const daysLeft = Math.floor((end - now) / msInDay);
-    // if (daysLeft >= 1) {
-    //   timeLeft = daysLeft;
-    //   timeFormat = "hari";
-    // } else {
-    //   timeLeft = Math.floor((end - now) / msInHours);
-    //   timeFormat = "jam";
-    // }
-
-    // const featuredProject = {
-    //   creatorSlug,
-    //   projectSlug,
-    //   title,
-    //   subtitle,
-    //   imageUrl,
-    //   creator,
-    //   avatar,
-    //   fundingProgress,
-    //   location,
-    //   category,
-    //   timeLeft,
-    //   timeFormat,
-    // };
-
     res.status(200).json({
       error: false,
       status: 200,
@@ -220,6 +177,12 @@ export const getProjectHeader = async (req, res, next) => {
       throw error;
     }
 
+    if (project.status !== "oncampaign" && project.status !== "finished") {
+      const error = new Error("Project has not been made.");
+      error.statusCode = 401;
+      throw error;
+    }
+
     const newObject = project.toObject();
     const now = new Date();
     const end = newObject.basic.endDate;
@@ -238,6 +201,10 @@ export const getProjectHeader = async (req, res, next) => {
       timeFormat = "jam";
     }
 
+    const uniqueSupporters = await Support.distinct("supporter", {
+      supportedProject: project,
+    });
+    const countSupporters = uniqueSupporters.length;
     const fundingProgress = Math.round(
       (newObject.funding / newObject.basic.fundTarget) * 100
     );
@@ -259,6 +226,7 @@ export const getProjectHeader = async (req, res, next) => {
         timeLeft,
         timeFormat,
         fundingProgress,
+        countSupporters,
       },
     });
   } catch (error) {
