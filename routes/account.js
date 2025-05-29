@@ -11,5 +11,10 @@ router.get(
   isAuth,
   accountController.getProfileCreatedProjects
 );
+router.get(
+  "/profile/:profileId/backed",
+  isAuth,
+  accountController.getProfileBackedProjects
+);
 
 export default router;
