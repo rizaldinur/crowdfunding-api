@@ -4,7 +4,9 @@ import User from "../models/user.js";
 import Project from "../models/project.js";
 import mongoose from "mongoose";
 import Support from "../models/support.js";
-import { matchedData, validationResult } from "express-validator";
+import { body, matchedData, validationResult } from "express-validator";
+import bcrypt from "bcryptjs";
+
 config();
 
 export const getProfileHeader = async (req, res, next) => {
@@ -386,6 +388,118 @@ export const putUpdateProfile = async (req, res, next) => {
         userName: updatedProfile.name,
         userSlug: updatedProfile.slug,
         biography: updatedProfile.biography,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const putUpdateAccount = async (req, res, next) => {
+  try {
+    if (!req.params.profileId) {
+      const error = new Error("URL parameters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const { userId, slug } = req.authData;
+    const { profileId } = req.params;
+    if (profileId !== userId && profileId !== slug) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const profile =
+      (await User.findOne({ slug: slug })) || (await User.findById(userId));
+
+    if (!profile) {
+      const error = new Error("Profile not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const { email, password, newPassword, confirmPassword } = matchedData(req, {
+      includeOptionals: true,
+    });
+    const otherUserWithEmail = await User.findOne({
+      email: email,
+      _id: { $ne: new mongoose.Types.ObjectId(userId) },
+    });
+
+    if (otherUserWithEmail) {
+      await body("email")
+        .custom((value) => {
+          throw new Error("Email sudah terpakai.");
+        })
+        .run(req);
+    }
+
+    if (password) {
+      const isEqual = await bcrypt.compare(password, profile.password);
+      if (!isEqual) {
+        await body("password")
+          .custom((value) => {
+            throw new Error("Password tidak sesuai.");
+          })
+          .run(req);
+      }
+    }
+
+    if (newPassword) {
+      const isEqual = await bcrypt.compare(newPassword, profile.password);
+      if (isEqual) {
+        await body("newPassword")
+          .custom((value) => {
+            throw new Error(
+              "Password baru tidak boleh sama dengan password lama."
+            );
+          })
+          .run(req);
+      }
+    }
+
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      const error = new Error("Gagal memproses input.");
+      error.statusCode = 422;
+      console.log(result.array({ onlyFirstError: true }));
+      error.data = { errors: result.array({ onlyFirstError: true }) };
+      throw error;
+    }
+
+    profile.email = email;
+    if (newPassword && newPassword === confirmPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      profile.password = hashedPassword;
+    }
+
+    const updatedAccount = await profile.save();
+
+    const userData = {
+      email: updatedAccount.email,
+      userId: updatedAccount._id.toString(),
+      slug: updatedAccount.slug,
+      avatar: updatedAccount.avatarUrl,
+    };
+    const token = jwt.sign(userData, process.env.JWT_SECRETKEY, {
+      expiresIn: "15 minutes",
+    });
+    const refreshToken = token;
+
+    res.status(201).json({
+      error: false,
+      status: 201,
+      message: "Berhasil menyimpan perubahan",
+      data: {
+        refreshToken,
+        email: updatedAccount.email,
+        userSlug: updatedAccount.slug,
       },
     });
   } catch (error) {

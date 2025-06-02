@@ -46,4 +46,33 @@ router.put(
   accountController.putUpdateProfile
 );
 
+router.put(
+  "/settings/:profileId/account",
+  isAuth,
+  body("email")
+    .notEmpty()
+    .withMessage("Harus diisi.")
+    .trim()
+    .isEmail()
+    .withMessage("Masukkan format email yang benar.")
+    .normalizeEmail(),
+  body("newPassword")
+    .optional({ values: "falsy" })
+    .trim()
+    .escape()
+    .isStrongPassword(),
+  body("confirmPassword")
+    .optional({ values: "falsy" })
+    .trim()
+    .escape()
+    .custom((input, { req }) => {
+      if (input !== req.body.newPassword) {
+        throw new Error("Password tidak sama.");
+      }
+      return true;
+    }),
+  body("password").notEmpty().withMessage("Harus diisi.").trim().escape(),
+  accountController.putUpdateAccount
+);
+
 export default router;
