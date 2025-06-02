@@ -322,7 +322,7 @@ export const putUpdateProfile = async (req, res, next) => {
   try {
     const result = validationResult(req);
     if (!req.params.profileId) {
-      const error = new Error("URL paremeters invalid.");
+      const error = new Error("URL parameters invalid.");
       error.statusCode = 400;
       throw error;
     }
@@ -332,6 +332,7 @@ export const putUpdateProfile = async (req, res, next) => {
     if (profileId !== userId && profileId !== slug) {
       const error = new Error("Unauthorized.");
       error.statusCode = 401;
+      error.data = { authorized: false };
       throw error;
     }
 
