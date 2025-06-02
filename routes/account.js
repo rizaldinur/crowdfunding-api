@@ -35,7 +35,6 @@ router.put(
   body("biography")
     .optional()
     .trim()
-    .escape()
     .isLength({ max: 300 })
     .withMessage("Maksimal 300 karakter."),
   body("uniqueUrl")
