@@ -250,3 +250,69 @@ export const getProfileBackedProjects = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSettingTabsData = async (req, res, next) => {
+  try {
+    const page = req.params?.page || "profile";
+
+    if (!["profile", "account"].includes(page)) {
+      const error = new Error("Page not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (!req.params?.profileId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const { profileId } = req.params;
+    const { userId, slug: userSlug } = req.authData;
+
+    if (profileId !== userId && profileId !== userSlug) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const profile =
+      (await User.findOne({
+        slug: profileId,
+      })) || (await User.findById(profileId));
+
+    if (!profile) {
+      const error = new Error("Profile not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    let profileTab;
+    if (page === "profile") {
+      profileTab = {
+        name: profile.name,
+        biography: profile.biography,
+      };
+    }
+
+    let accountTab;
+    if (page === "account") {
+      accountTab = {
+        email: profile.email,
+      };
+    }
+
+    res.status(200).json({
+      error: false,
+      message: "ok",
+      status: 200,
+      data: { profileTab, accountTab },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};

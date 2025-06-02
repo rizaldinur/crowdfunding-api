@@ -17,4 +17,10 @@ router.get(
   accountController.getProfileBackedProjects
 );
 
+router.get(
+  "/settings/:profileId{/:page}",
+  isAuth,
+  accountController.getSettingTabsData
+);
+
 export default router;
