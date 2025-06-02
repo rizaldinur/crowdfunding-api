@@ -33,12 +33,12 @@ router.put(
     .isLength({ min: 2 })
     .withMessage("Minimal 2 karakter."),
   body("biography")
-    .optional()
+    .optional({ values: "falsy" })
     .trim()
     .isLength({ max: 300 })
     .withMessage("Maksimal 300 karakter."),
   body("uniqueUrl")
-    .optional()
+    .optional({ values: "falsy" })
     .trim()
     .escape()
     .isLength({ max: 20 })
