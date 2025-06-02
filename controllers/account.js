@@ -4,6 +4,7 @@ import User from "../models/user.js";
 import Project from "../models/project.js";
 import mongoose from "mongoose";
 import Support from "../models/support.js";
+import { matchedData, validationResult } from "express-validator";
 config();
 
 export const getProfileHeader = async (req, res, next) => {
@@ -308,6 +309,83 @@ export const getSettingTabsData = async (req, res, next) => {
       message: "ok",
       status: 200,
       data: { profileTab, accountTab },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const putUpdateProfile = async (req, res, next) => {
+  try {
+    const result = validationResult(req);
+    if (!req.params.profileId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const { userId, slug } = req.authData;
+    const { profileId } = req.params;
+    if (profileId !== userId && profileId !== slug) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const profile =
+      (await User.findOne({ slug: slug })) || (await User.findById(userId));
+
+    if (!profile) {
+      const error = new Error("Profile not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (!result.isEmpty()) {
+      const error = new Error("Gagal memproses input.");
+      error.statusCode = 422;
+
+      error.data = { errors: result.array() };
+      throw error;
+    }
+
+    const { name, biography, uniqueUrl } = matchedData(req, {
+      includeOptionals: true,
+    });
+
+    profile.name = name;
+    profile.biography = biography;
+    if (uniqueUrl) {
+      profile.slug = uniqueUrl;
+    }
+
+    const updatedProfile = await profile.save();
+    const userData = {
+      email: updatedProfile.email,
+      userId: updatedProfile._id.toString(),
+      slug: updatedProfile.slug,
+      avatar: updatedProfile.avatarUrl,
+    };
+    const token = jwt.sign(userData, process.env.JWT_SECRETKEY, {
+      expiresIn: "15 minutes",
+    });
+    const refreshToken = token;
+
+    res.status(201).json({
+      error: false,
+      status: 201,
+      message: "Berhasil menyimpan perubahan",
+      data: {
+        authorized: true,
+        refreshToken,
+        userId: updatedProfile._id,
+        userName: updatedProfile.name,
+        userSlug: updatedProfile.slug,
+        biography: updatedProfile.biography,
+      },
     });
   } catch (error) {
     if (!error.statusCode) {
