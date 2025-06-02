@@ -296,6 +296,7 @@ export const getSettingTabsData = async (req, res, next) => {
       profileTab = {
         name: profile.name,
         biography: profile.biography,
+        avatarUrl: profile.avatarUrl,
       };
     }
 
@@ -355,12 +356,16 @@ export const putUpdateProfile = async (req, res, next) => {
       throw error;
     }
 
-    const { name, biography, uniqueUrl } = matchedData(req, {
+    const { name, avatarUrl, biography, uniqueUrl } = matchedData(req, {
       includeOptionals: true,
     });
 
-    profile.name = name;
+    if (profile.name !== name) {
+      profile.name = name;
+      await profile.save();
+    }
     profile.biography = biography;
+    profile.avatarUrl = avatarUrl;
     if (uniqueUrl) {
       profile.slug = uniqueUrl;
     }

@@ -32,6 +32,11 @@ router.put(
     .escape()
     .isLength({ min: 2 })
     .withMessage("Minimal 2 karakter."),
+  body("avatarUrl")
+    .optional({ values: "falsy" })
+    .trim()
+    .isURL()
+    .withMessage("Invalid URL."),
   body("biography")
     .optional({ values: "falsy" })
     .trim()
