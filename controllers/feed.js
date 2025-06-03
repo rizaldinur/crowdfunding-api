@@ -75,7 +75,8 @@ export const getRecommendedProjects = async (req, res, next) => {
   try {
     const projects = await Project.find({ status: "oncampaign" })
       .sort({
-        "basic.launchDate": "desc",
+        "basic.launchDate": "asc",
+        funding: "desc",
       })
       .limit(6)
       .populate("creator");
