@@ -55,9 +55,9 @@ router.put(
   "/settings/:profileId/account",
   isAuth,
   body("email")
+    .trim()
     .notEmpty()
     .withMessage("Harus diisi.")
-    .trim()
     .isEmail()
     .withMessage("Masukkan format email yang benar.")
     .normalizeEmail(),
