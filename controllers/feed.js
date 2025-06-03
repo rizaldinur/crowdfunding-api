@@ -355,17 +355,17 @@ export const getDiscoverProjects = async (req, res, next) => {
       ]);
     }
 
-    // filters.or([{ status: "oncampaign" }, { status: "finished" }]);
     if (query.category) {
       const category = new RegExp(query.category, "i");
       filters.where({ "basic.category": { $regex: category } });
     }
 
-    if (req.query.location) {
+    if (query.location) {
       const location = new RegExp(query.location, "i");
       filters.where({ "basic.location": { $regex: location } });
     }
 
+    let count = filters.clone();
     const discover = await filters
       .skip((page - 1) * 6)
       .limit(perPage)
@@ -414,7 +414,7 @@ export const getDiscoverProjects = async (req, res, next) => {
       return { ...mappedDoc, timeLeft, timeFormat, ...creator };
     });
 
-    const totalItems = projects.length;
+    const totalItems = await count.countDocuments();
     totalPages = Math.ceil(totalItems / perPage);
 
     res.status(200).json({
