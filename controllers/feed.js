@@ -318,7 +318,6 @@ export const getProjectDetails = async (req, res, next) => {
 
 export const getDiscoverProjects = async (req, res, next) => {
   try {
-    const filters = Project.find();
     let page = 1;
     let perPage = 6;
     let totalPages = 0;
@@ -333,18 +332,29 @@ export const getDiscoverProjects = async (req, res, next) => {
       throw error;
     }
 
+    let filters = Project.find({
+      status: { $in: ["oncampaign", "finished"] },
+    }).populate("creator");
+
     const query = matchedData(req);
     page = query.page ? parseInt(query.page) : 1;
 
     if (query.search) {
+      console.log(query.search);
+
       const keyword = new RegExp(query.search, "i");
+      console.log(keyword);
+
+      const creator = await User.findOne({ name: { $regex: keyword } });
+
       filters.or([
         { "basic.title": { $regex: keyword } },
-        { creator: { $regex: keyword } },
+        { creator: creator },
         { "basic.category": { $regex: keyword } },
       ]);
     }
 
+    // filters.or([{ status: "oncampaign" }, { status: "finished" }]);
     if (query.category) {
       const category = new RegExp(query.category, "i");
       filters.where({ "basic.category": { $regex: category } });
@@ -355,12 +365,9 @@ export const getDiscoverProjects = async (req, res, next) => {
       filters.where({ "basic.location": { $regex: location } });
     }
 
-    filters.or([{ status: "oncampaign" }, { status: "finished" }]);
-
     const discover = await filters
       .skip((page - 1) * 6)
       .limit(perPage)
-      .populate("creator")
       .select(
         "slug basic.imageUrl basic.title basic.subTitle basic.location basic.category funding status basic.fundTarget basic.endDate creator"
       )
