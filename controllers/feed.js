@@ -8,7 +8,7 @@ export const getFeaturedProject = async (req, res, next) => {
   try {
     const project = await Project.findOne({ status: "oncampaign" })
       .sort({
-        "basic.launchDate": "desc",
+        funding: -1,
       })
       .populate("creator");
 
