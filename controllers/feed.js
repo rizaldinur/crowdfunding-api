@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Project from "../models/project.js";
 import User from "../models/user.js";
 import Support from "../models/support.js";
+import { matchedData, validationResult } from "express-validator";
 
 export const getFeaturedProject = async (req, res, next) => {
   try {
@@ -306,6 +307,113 @@ export const getProjectDetails = async (req, res, next) => {
         refreshToken: req.refreshToken,
         ...tabData,
       },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const getDiscoverProjects = async (req, res, next) => {
+  try {
+    const filters = Project.find();
+    let page = 1;
+    let perPage = 6;
+    let totalPages = 0;
+
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      const error = new Error("Query parameters invalid.");
+      error.data = {
+        errors: result.array({ onlyFirstError: true }),
+      };
+      error.statusCode = 422;
+      throw error;
+    }
+
+    const query = matchedData(req);
+    page = query.page ? parseInt(query.page) : 1;
+
+    if (query.search) {
+      const keyword = new RegExp(query.search, "i");
+      filters.or([
+        { "basic.title": { $regex: keyword } },
+        { creator: { $regex: keyword } },
+        { "basic.category": { $regex: keyword } },
+      ]);
+    }
+
+    if (query.category) {
+      const category = new RegExp(query.category, "i");
+      filters.where({ "basic.category": { $regex: category } });
+    }
+
+    if (req.query.location) {
+      const location = new RegExp(query.location, "i");
+      filters.where({ "basic.location": { $regex: location } });
+    }
+
+    filters.or([{ status: "oncampaign" }, { status: "finished" }]);
+
+    const discover = await filters
+      .skip((page - 1) * 6)
+      .limit(perPage)
+      .populate("creator")
+      .select(
+        "slug basic.imageUrl basic.title basic.subTitle basic.location basic.category funding status basic.fundTarget basic.endDate creator"
+      )
+      .sort({ "basic.launchDate": "desc", status: "desc" })
+      .exec();
+
+    const projects = discover.map((project) => {
+      const doc = project._doc;
+      const mappedDoc = {
+        imageUrl: doc.basic.imageUrl,
+        title: doc.basic.title,
+        subtitle: doc.basic.subTitle,
+        projectSlug: doc.slug,
+        projectStatus: doc.status,
+        fundingProgress: Math.floor((doc.funding / doc.basic.fundTarget) * 100),
+        location: doc.basic.location,
+        category: doc.basic.category,
+      };
+
+      const now = new Date();
+      const end = doc.basic.endDate;
+      const msInDay = 1000 * 60 * 60 * 24;
+      const msInHours = 1000 * 60 * 60;
+
+      let timeFormat;
+      let timeLeft;
+      const daysLeft = Math.floor((end - now) / msInDay);
+      if (daysLeft >= 1) {
+        timeLeft = daysLeft;
+        timeFormat = "hari";
+      } else {
+        timeLeft = (end - now) / msInHours;
+        timeLeft = timeLeft < 0 ? 0 : timeLeft;
+        timeFormat = "jam";
+      }
+      const creator = {
+        _id: doc.creator._id,
+        creator: doc.creator.name,
+        creatorSlug: doc.creator.slug,
+        avatar: doc.creator.avatarUrl,
+      };
+
+      return { ...mappedDoc, timeLeft, timeFormat, ...creator };
+    });
+
+    const totalItems = projects.length;
+    totalPages = Math.ceil(totalItems / perPage);
+
+    res.status(200).json({
+      error: false,
+      status: 200,
+      message: "Berhasil mengambil data.",
+      data: { page, totalPages, perPage, totalItems, projects },
     });
   } catch (error) {
     if (!error.statusCode) {
