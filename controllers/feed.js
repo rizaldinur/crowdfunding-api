@@ -3,6 +3,7 @@ import Project from "../models/project.js";
 import User from "../models/user.js";
 import Support from "../models/support.js";
 import { matchedData, validationResult } from "express-validator";
+import Update from "../models/update.js";
 
 export const getFeaturedProject = async (req, res, next) => {
   try {
@@ -434,6 +435,79 @@ export const getDiscoverProjects = async (req, res, next) => {
       message: "Berhasil mengambil data.",
       data: { page, totalPages, perPage, totalItems, projects },
     });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const postUpdateProject = async (req, res, next) => {
+  try {
+    if (!req.params?.profileId || !req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const result = validationResult(req);
+    if (!result.isEmpty) {
+      const error = new Error("Gagal memproses input.");
+      error.statusCode = 422;
+      error.data = { errors: result.array({ onlyFirstError: true }) };
+      throw error;
+    }
+
+    const { profileId, projectId } = req.params;
+
+    const creator =
+      (await User.findOne({ slug: profileId }).select("_id")) ||
+      (await User.findById(profileId).select("_id"));
+
+    const { userId, slug } = req.authData;
+
+    if (!creator._id.equals(userId)) {
+      const error = new Error("Unauthorized.");
+      error.statusCode = 401;
+      error.data = { authorized: false };
+      throw error;
+    }
+
+    const project =
+      (await Project.findOne({
+        slug: projectId,
+        creator: creator,
+      }).select("_id")) || (await Project.findById(projectId).select("_id"));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const { title, content } = matchedData(req);
+
+    const projectUpdate = new Update({
+      title,
+      content,
+      author: creator,
+      project,
+    });
+
+    await projectUpdate.save();
+
+    res.status(201).json({
+      error: false,
+      status: 201,
+      message: "Berhasil menyimpan perubahan",
+      data: {
+        authorized: true,
+        refreshToken: req.refreshToken,
+        projectUpdate,
+      },
+    });
+    // if(!project)
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;

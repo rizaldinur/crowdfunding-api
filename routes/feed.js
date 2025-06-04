@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authRecursive, isAuth } from "../middlewares/middlewares.js";
 import * as feedController from "../controllers/feed.js";
-import { query } from "express-validator";
+import { body, query } from "express-validator";
 
 const router = Router();
 
@@ -44,6 +44,14 @@ router.get(
       return value.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
     }),
   feedController.getDiscoverProjects
+);
+
+router.post(
+  "/project/details/:profileId/:projectId/update",
+  isAuth,
+  body("title").notEmpty().withMessage("Harus diisi").trim(),
+  body("content").notEmpty().withMessage("Harus diisi").trim(),
+  feedController.postUpdateProject
 );
 
 export default router;

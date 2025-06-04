@@ -61,38 +61,21 @@ export const isAuth = async (req, res, next) => {
 
 export const authRecursive = async (req, res, next) => {
   try {
-    // let role = "guest";
     req.role = "guest";
-    // await new Promise((resolve, reject) => setTimeout(() => resolve(), 15000));
     const authHeader = req.get("Authorization");
-    // const error = new Error("Belum terautentikasi.");
-    // error.data = { authenticated: false };
-    // error.statusCode = 401;
 
     if (!authHeader) {
-      // throw error;
-      // req.role = "guest";
-      return next();
     }
 
     const token = authHeader.split(" ")[1];
 
     if (!token) {
-      // throw error;
-      // req.role = "guest";
       return next();
     }
 
-    let decodedToken;
-    try {
-      decodedToken = jwt.verify(token, process.env.JWT_SECRETKEY);
-    } catch (error) {
-      return next();
-    }
+    let decodedToken = jwt.verify(token, process.env.JWT_SECRETKEY);
 
     if (!decodedToken) {
-      // throw error;
-      // req.role = "guest";
       return next();
     }
 
@@ -135,9 +118,7 @@ export const authRecursive = async (req, res, next) => {
     req.authData = decodedToken;
     next();
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
-    next(error);
+    console.error(error);
+    next();
   }
 };
