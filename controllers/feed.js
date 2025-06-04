@@ -307,6 +307,19 @@ export const getProjectDetails = async (req, res, next) => {
       };
     }
 
+    if (page === "updates") {
+      const updates = await Update.find({
+        project,
+        author: creator,
+      }).sort({ createdAt: "desc" });
+
+      tabData = {
+        updates,
+        creatorName: creator.name,
+        avatar: creator.avatarUrl,
+      };
+    }
+
     if (page === "faqs") {
       tabData = { faqs: newObject.story.faqs };
     }
