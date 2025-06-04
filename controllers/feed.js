@@ -211,6 +211,7 @@ export const getProjectHeader = async (req, res, next) => {
       timeFormat = "hari";
     } else {
       timeLeft = Math.floor((end - now) / msInHours);
+      timeLeft = timeLeft < 0 ? 0 : timeLeft;
       timeFormat = "jam";
     }
 
