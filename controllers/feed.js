@@ -153,16 +153,10 @@ export const getProjectHeader = async (req, res, next) => {
       throw error;
     }
 
-    const page = req.params?.page || "story";
-
-    const pageMap = ["story", "updates", "faqs", "comments"];
-    if (!pageMap.includes(page)) {
-      const error = new Error("Page not found.");
-      error.statusCode = 404;
-      throw error;
-    }
-
     const { profileId, projectId } = req.params;
+
+    const { userId, slug } = req.authData || {};
+
     const creator =
       (await User.findOne({ slug: profileId })) ||
       (await User.findById(profileId));
@@ -183,6 +177,22 @@ export const getProjectHeader = async (req, res, next) => {
       const error = new Error("Project has not been made.");
       error.statusCode = 401;
       throw error;
+    }
+
+    if (
+      req.role !== "admin" &&
+      creator._id.equals(new mongoose.Types.ObjectId(userId))
+    ) {
+      req.role = "creator";
+    } else {
+      const backedProject = await Support.findOne({
+        supportedProject: project,
+        supporter: new mongoose.Types.ObjectId(userId),
+      });
+
+      if (req.role !== "admin" && backedProject) {
+        req.role = "backer";
+      }
     }
 
     const newObject = project.toObject();
@@ -216,6 +226,7 @@ export const getProjectHeader = async (req, res, next) => {
       status: 200,
       data: {
         authorized: true,
+        role: req.role,
         refreshToken: req.refreshToken,
         title: newObject.basic.title,
         subtitle: newObject.basic.subTitle,

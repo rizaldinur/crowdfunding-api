@@ -22,6 +22,7 @@ const userSchema = new Schema(
     biography: { type: String },
     slug: { type: String, unique: true },
     savedProjects: [{ type: mongoose.SchemaTypes.ObjectId, ref: "Project" }],
+    isAdmin: { type: Boolean },
   },
   { timestamps: true }
 );

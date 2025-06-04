@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isAuth } from "../middlewares/middlewares.js";
+import { authRecursive, isAuth } from "../middlewares/middlewares.js";
 import * as feedController from "../controllers/feed.js";
 import { query } from "express-validator";
 
@@ -12,6 +12,7 @@ router.get(
 );
 router.get(
   "/project/details/:profileId/:projectId/header",
+  authRecursive,
   feedController.getProjectHeader
 );
 router.get(
