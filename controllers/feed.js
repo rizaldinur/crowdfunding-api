@@ -336,10 +336,16 @@ export const getProjectDetails = async (req, res, next) => {
         project,
       })
         .select("author content")
+        .sort({ createdAt: "desc" })
         .populate("author");
 
       const mappedComments = await Promise.allSettled(
-        comments.map(async (comment) => {
+        comments.map(async (value) => {
+          const comment = value._doc;
+          let role = "backer";
+          if (creator._id.equals(comment.author._id)) {
+            role = "creator";
+          }
           const replies = await Reply.find({
             comment,
           })
@@ -359,6 +365,7 @@ export const getProjectDetails = async (req, res, next) => {
           const author = {
             name: comment.author.name,
             avatar: comment.author.avatarUrl,
+            role,
           };
 
           return { ...comment, author, replies: mappedReplies };
@@ -532,7 +539,7 @@ export const postUpdateProject = async (req, res, next) => {
       (await User.findOne({ slug: profileId }).select("_id")) ||
       (await User.findById(profileId).select("_id"));
 
-    const { userId, slug } = req.authData;
+    const { userId } = req.authData;
 
     if (!creator._id.equals(userId)) {
       const error = new Error("Unauthorized.");
@@ -574,7 +581,84 @@ export const postUpdateProject = async (req, res, next) => {
         projectUpdate,
       },
     });
-    // if(!project)
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const postComment = async (req, res, next) => {
+  try {
+    if (!req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      const error = new Error("Gagal memproses input.");
+      error.statusCode = 422;
+      error.data = { errors: result.array({ onlyFirstError: true }) };
+      throw error;
+    }
+
+    const { projectId } = req.params;
+    const { userId, slug } = req.authData;
+    const author = await User.findById(userId).select("name avatarUrl");
+
+    const project = await Project.findOne({
+      slug: projectId,
+    })
+      .select("_id")
+      .populate("creator");
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    let role = "creator";
+    if (!project.creator._id.equals(userId)) {
+      const support = await Support.findOne({
+        supportedProject: project,
+        supporter: author,
+      }).select("_id");
+
+      if (!support) {
+        const error = new Error("Bukan pendukung/kreator.");
+        error.statusCode = 401;
+        throw error;
+      }
+      role = "backer";
+    }
+
+    const { content } = matchedData(req);
+    const comment = new Comment();
+    comment.project = project;
+    comment.content = content;
+    comment.author = author;
+    await comment.save();
+
+    res.status(201).json({
+      error: false,
+      message: "Berhasil menyimpan data",
+      data: {
+        refreshToken: req.refreshToken,
+        newComment: {
+          author: {
+            role,
+            name: author.name,
+            avatar: author.avatarUrl,
+          },
+          content: comment.content,
+          replies: [],
+        },
+      },
+    });
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;

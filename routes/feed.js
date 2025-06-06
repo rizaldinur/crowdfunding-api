@@ -54,4 +54,14 @@ router.post(
   feedController.postUpdateProject
 );
 
+router.post(
+  "/comment/:projectId",
+  isAuth,
+  body("content")
+    .isLength({ min: 2 })
+    .withMessage("Harus diisi, minimal 2.")
+    .trim(),
+  feedController.postComment
+);
+
 export default router;
