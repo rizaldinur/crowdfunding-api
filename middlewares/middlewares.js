@@ -62,6 +62,7 @@ export const isAuth = async (req, res, next) => {
 export const authRecursive = async (req, res, next) => {
   try {
     req.role = "guest";
+    req.isAuth = "false";
     const authHeader = req.get("Authorization");
 
     if (!authHeader) {
@@ -96,7 +97,6 @@ export const authRecursive = async (req, res, next) => {
 
     if (user.isAdmin) {
       req.role = "admin";
-      return next();
     } else {
       req.role = "user";
     }
@@ -114,6 +114,7 @@ export const authRecursive = async (req, res, next) => {
       });
     }
 
+    req.isAuth = true;
     req.refreshToken = refreshToken;
     req.authData = decodedToken;
     next();
