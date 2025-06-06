@@ -4,6 +4,8 @@ import User from "../models/user.js";
 import Support from "../models/support.js";
 import { matchedData, validationResult } from "express-validator";
 import Update from "../models/update.js";
+import Comment from "../models/comment.js";
+import Reply from "../models/reply.js";
 
 export const getFeaturedProject = async (req, res, next) => {
   try {
@@ -222,13 +224,21 @@ export const getProjectHeader = async (req, res, next) => {
     const fundingProgress = Math.round(
       (newObject.funding / newObject.basic.fundTarget) * 100
     );
+
+    let user;
+    if (req.isAuth) {
+      user = await User.findOne({
+        slug: req.authData?.slug,
+      }).select("name avatarUrl");
+    }
     res.status(200).json({
       error: false,
       message: "Berhasil mengambil data.",
       status: 200,
       data: {
-        authorized: true,
         role: req.role,
+        isAuth: req.isAuth,
+        user,
         refreshToken: req.refreshToken,
         title: newObject.basic.title,
         subtitle: newObject.basic.subTitle,
@@ -318,6 +328,49 @@ export const getProjectDetails = async (req, res, next) => {
         updates,
         creatorName: creator.name,
         avatar: creator.avatarUrl,
+      };
+    }
+
+    if (page === "comments") {
+      const comments = await Comment.find({
+        project,
+      })
+        .select("author content")
+        .populate("author");
+
+      const mappedComments = await Promise.allSettled(
+        comments.map(async (comment) => {
+          const replies = await Reply.find({
+            comment,
+          })
+            .limit(3)
+            .select("content author")
+            .populate("author");
+
+          const mappedReplies = replies.map((reply) => {
+            const author = {
+              name: reply.author.name,
+              avatar: reply.author.avatarUrl,
+            };
+
+            return { ...reply, author };
+          });
+
+          const author = {
+            name: comment.author.name,
+            avatar: comment.author.avatarUrl,
+          };
+
+          return { ...comment, author, replies: mappedReplies };
+        })
+      );
+
+      const commentWithReplies = mappedComments
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+
+      tabData = {
+        commentWithReplies,
       };
     }
 
