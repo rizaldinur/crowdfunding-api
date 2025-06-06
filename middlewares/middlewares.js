@@ -79,6 +79,7 @@ export const authRecursive = async (req, res, next) => {
     if (!decodedToken) {
       return next();
     }
+    req.authData = decodedToken;
 
     const { email, userId, exp, slug, avatar } = decodedToken;
 
@@ -94,6 +95,7 @@ export const authRecursive = async (req, res, next) => {
     if (!user) {
       return next();
     }
+    req.isAuth = true;
 
     if (user.isAdmin) {
       req.role = "admin";
@@ -114,9 +116,7 @@ export const authRecursive = async (req, res, next) => {
       });
     }
 
-    req.isAuth = true;
     req.refreshToken = refreshToken;
-    req.authData = decodedToken;
     next();
   } catch (error) {
     console.error(error);
