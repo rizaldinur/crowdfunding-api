@@ -62,7 +62,7 @@ export const isAuth = async (req, res, next) => {
 export const authRecursive = async (req, res, next) => {
   try {
     req.role = "guest";
-    req.isAuth = "false";
+    req.isAuth = false;
     const authHeader = req.get("Authorization");
 
     if (!authHeader) {
