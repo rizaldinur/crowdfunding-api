@@ -272,7 +272,7 @@ export const getProjectDetails = async (req, res, next) => {
 
     const page = req.params?.page || "story";
 
-    const pageMap = ["story", "updates", "faqs", "comments"];
+    const pageMap = ["story", "updates", "faqs"];
     if (!pageMap.includes(page)) {
       const error = new Error("Page not found.");
       error.statusCode = 404;
@@ -328,56 +328,6 @@ export const getProjectDetails = async (req, res, next) => {
         updates,
         creatorName: creator.name,
         avatar: creator.avatarUrl,
-      };
-    }
-
-    if (page === "comments") {
-      const comments = await Comment.find({
-        project,
-      })
-        .select("author content")
-        .sort({ createdAt: "desc" })
-        .populate("author");
-
-      const mappedComments = await Promise.allSettled(
-        comments.map(async (value) => {
-          const comment = value._doc;
-          let role = "backer";
-          if (creator._id.equals(comment.author._id)) {
-            role = "creator";
-          }
-          const replies = await Reply.find({
-            comment,
-          })
-            .limit(3)
-            .select("content author")
-            .populate("author");
-
-          const mappedReplies = replies.map((reply) => {
-            const author = {
-              name: reply.author.name,
-              avatar: reply.author.avatarUrl,
-            };
-
-            return { ...reply, author };
-          });
-
-          const author = {
-            name: comment.author.name,
-            avatar: comment.author.avatarUrl,
-            role,
-          };
-
-          return { ...comment, author, replies: mappedReplies };
-        })
-      );
-
-      const commentWithReplies = mappedComments
-        .filter((result) => result.status === "fulfilled")
-        .map((result) => result.value);
-
-      tabData = {
-        commentWithReplies,
       };
     }
 
@@ -517,6 +467,105 @@ export const getDiscoverProjects = async (req, res, next) => {
   }
 };
 
+export const getComments = async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      const error = new Error("Query parameters invalid.");
+      error.data = {
+        errors: result.array({ onlyFirstError: true }),
+      };
+      error.statusCode = 422;
+      throw error;
+    }
+    let { offset = 0 } = matchedData(req);
+
+    if (!req.params?.projectId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const project =
+      (await Project.findOne({
+        slug: projectId,
+      }).populate("creator")) ||
+      (await Project.findById(projectId).populate("creator"));
+
+    if (!project) {
+      const error = new Error("Project not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const countComments = await Comment.countDocuments({ project });
+
+    const comments = await Comment.find({
+      project,
+    })
+      .select("author content")
+      .sort({ createdAt: "desc" })
+      .skip(offset)
+      .limit(3)
+      .populate("author");
+
+    const mappedComments = await Promise.allSettled(
+      comments.map(async (value) => {
+        const comment = value._doc;
+        let role = "backer";
+        if (project.creator._id.equals(comment.author._id)) {
+          role = "creator";
+        }
+        const replies = await Reply.find({
+          comment,
+        })
+          .limit(3)
+          .select("content author")
+          .populate("author");
+
+        const mappedReplies = replies.map((reply) => {
+          const author = {
+            name: reply.author.name,
+            avatar: reply.author.avatarUrl,
+          };
+
+          return { ...reply, author };
+        });
+
+        const author = {
+          name: comment.author.name,
+          avatar: comment.author.avatarUrl,
+          role,
+        };
+
+        return { ...comment, author, replies: mappedReplies };
+      })
+    );
+
+    const commentWithReplies = mappedComments
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    res.status(200).json({
+      error: false,
+      message: "Berhasil mengambil data.",
+      status: 200,
+      data: {
+        refreshToken: req.refreshToken,
+        totalComments: countComments,
+        commentWithReplies,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
 export const postUpdateProject = async (req, res, next) => {
   try {
     if (!req.params?.profileId || !req.params?.projectId) {
@@ -645,7 +694,7 @@ export const postComment = async (req, res, next) => {
 
     res.status(201).json({
       error: false,
-      message: "Berhasil menyimpan data",
+      message: "Berhasil mengirim komentar.",
       data: {
         refreshToken: req.refreshToken,
         newComment: {

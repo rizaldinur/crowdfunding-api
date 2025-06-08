@@ -45,6 +45,15 @@ router.get(
     }),
   feedController.getDiscoverProjects
 );
+router.get(
+  "/comments/:projectId",
+  authRecursive,
+  query("offset")
+    .optional({ values: "falsy" })
+    .isNumeric({ no_symbols: true })
+    .withMessage("No symbols allowed."),
+  feedController.getComments
+);
 
 router.post(
   "/project/details/:profileId/:projectId/update",
