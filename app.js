@@ -60,7 +60,7 @@ app.use((error, req, res, next) => {
 });
 
 let newTask = nodeCron.createTask(
-  "* * * * *",
+  "0 * * * *",
   async () => {
     const now = new Date();
     console.log(`CRON running every minute at ${now.toISOString()}`);
