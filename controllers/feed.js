@@ -698,6 +698,7 @@ export const postComment = async (req, res, next) => {
       data: {
         refreshToken: req.refreshToken,
         newComment: {
+          _id: comment._id,
           author: {
             role,
             name: author.name,
