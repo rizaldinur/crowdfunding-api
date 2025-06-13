@@ -72,5 +72,14 @@ router.post(
     .trim(),
   feedController.postComment
 );
+router.post(
+  "/reply/:commentId",
+  isAuth,
+  body("reply")
+    .isLength({ min: 2 })
+    .withMessage("Harus diisi, minimal 2.")
+    .trim(),
+  feedController.postReply
+);
 
 export default router;

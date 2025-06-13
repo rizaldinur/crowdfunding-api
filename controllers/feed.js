@@ -523,12 +523,19 @@ export const getComments = async (req, res, next) => {
         })
           .limit(3)
           .select("content author")
+          .sort({ createdAt: -1 })
           .populate("author");
 
-        const mappedReplies = replies.map((reply) => {
+        const mappedReplies = replies.map((value) => {
+          const reply = value._doc;
+          let role = "backer";
+          if (project.creator._id.equals(reply.author._id)) {
+            role = "creator";
+          }
           const author = {
             name: reply.author.name,
             avatar: reply.author.avatarUrl,
+            role,
           };
 
           return { ...reply, author };
@@ -540,7 +547,11 @@ export const getComments = async (req, res, next) => {
           role,
         };
 
-        return { ...comment, author, replies: mappedReplies };
+        const totalReplies = await Reply.countDocuments({
+          comment,
+        });
+
+        return { ...comment, author, totalReplies, replies: mappedReplies };
       })
     );
 
@@ -706,6 +717,85 @@ export const postComment = async (req, res, next) => {
           },
           content: comment.content,
           replies: [],
+        },
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
+export const postReply = async (req, res, next) => {
+  try {
+    if (!req.params?.commentId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      const error = new Error("Gagal memproses input.");
+      error.statusCode = 422;
+      error.data = { errors: result.array({ onlyFirstError: true }) };
+      throw error;
+    }
+
+    const { commentId } = req.params;
+    const { userId, slug } = req.authData;
+    const author = await User.findById(userId).select("name avatarUrl");
+
+    const comment = await Comment.findById(commentId);
+
+    if (!comment) {
+      const error = new Error("Comment not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    let role;
+    const project = await Project.findById(comment.project._id);
+    if (project.creator._id.equals(userId)) {
+      role = "creator";
+    }
+
+    if (!project.creator._id.equals(userId)) {
+      const support = await Support.findOne({
+        supportedProject: project,
+        supporter: author,
+      }).select("_id");
+
+      if (!support) {
+        const error = new Error("Bukan pendukung/kreator.");
+        error.statusCode = 401;
+        throw error;
+      }
+      role = "backer";
+    }
+
+    const { reply } = matchedData(req);
+    const newReply = new Reply();
+    newReply.content = reply;
+    newReply.comment = comment;
+    newReply.author = author;
+    await newReply.save();
+
+    res.status(201).json({
+      error: false,
+      message: "Berhasil mengirim balasan.",
+      data: {
+        refreshToken: req.refreshToken,
+        newReply: {
+          _id: newReply._id,
+          author: {
+            role,
+            name: author.name,
+            avatar: author.avatarUrl,
+          },
+          content: newReply.content,
         },
       },
     });
