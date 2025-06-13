@@ -46,7 +46,7 @@ router.get(
   feedController.getDiscoverProjects
 );
 router.get(
-  "/comments/:projectId",
+  "/comment/:projectId",
   authRecursive,
   query("offset")
     .optional({ values: "falsy" })
