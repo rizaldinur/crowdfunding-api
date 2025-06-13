@@ -632,53 +632,6 @@ export const getReplies = async (req, res, next) => {
 
       return { ...reply, author };
     });
-    // const mappedComments = await Promise.allSettled(
-    //   comments.map(async (value) => {
-    //     const comment = value._doc;
-    //     let role = "backer";
-    //     if (project.creator._id.equals(comment.author._id)) {
-    //       role = "creator";
-    //     }
-    //     const replies = await Reply.find({
-    //       comment,
-    //     })
-    //       .limit(3)
-    //       .select("content author")
-    //       .sort({ createdAt: -1 })
-    //       .populate("author");
-
-    //     const mappedReplies = replies.map((value) => {
-    //       const reply = value._doc;
-    //       let role = "backer";
-    //       if (project.creator._id.equals(reply.author._id)) {
-    //         role = "creator";
-    //       }
-    //       const author = {
-    //         name: reply.author.name,
-    //         avatar: reply.author.avatarUrl,
-    //         role,
-    //       };
-
-    //       return { ...reply, author };
-    //     });
-
-    //     const author = {
-    //       name: comment.author.name,
-    //       avatar: comment.author.avatarUrl,
-    //       role,
-    //     };
-
-    //     const totalReplies = await Reply.countDocuments({
-    //       comment,
-    //     });
-
-    //     return { ...comment, author, totalReplies, replies: mappedReplies };
-    //   })
-    // );
-
-    // const commentWithReplies = mappedComments
-    //   .filter((result) => result.status === "fulfilled")
-    //   .map((result) => result.value);
 
     res.status(200).json({
       error: false,
