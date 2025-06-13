@@ -55,6 +55,16 @@ router.get(
   feedController.getComments
 );
 
+router.get(
+  "/reply/:commentId",
+  authRecursive,
+  query("offset")
+    .optional({ values: "falsy" })
+    .isNumeric({ no_symbols: true })
+    .withMessage("No symbols allowed."),
+  feedController.getReplies
+);
+
 router.post(
   "/project/details/:profileId/:projectId/update",
   isAuth,

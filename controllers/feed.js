@@ -577,6 +577,126 @@ export const getComments = async (req, res, next) => {
   }
 };
 
+export const getReplies = async (req, res, next) => {
+  try {
+    const { commentId } = req.params;
+
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      const error = new Error("Query parameters invalid.");
+      error.data = {
+        errors: result.array({ onlyFirstError: true }),
+      };
+      error.statusCode = 422;
+      throw error;
+    }
+    let { offset = 0 } = matchedData(req);
+
+    if (!req.params?.commentId) {
+      const error = new Error("URL paremeters invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const comment = await Comment.findById(commentId)
+      .select("author content project")
+      .populate("project");
+
+    if (!comment) {
+      const error = new Error("Comment not found.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const replies = await Reply.find({
+      comment,
+    })
+      .select("author content comment")
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .skip(offset)
+      .populate("author");
+
+    const mappedReplies = replies.map((value) => {
+      const reply = value._doc;
+      let role = "backer";
+      if (comment.project.creator._id.equals(reply.author._id)) {
+        role = "creator";
+      }
+
+      const author = {
+        name: reply.author.name,
+        avatar: reply.author.avatarUrl,
+        role,
+      };
+
+      return { ...reply, author };
+    });
+    // const mappedComments = await Promise.allSettled(
+    //   comments.map(async (value) => {
+    //     const comment = value._doc;
+    //     let role = "backer";
+    //     if (project.creator._id.equals(comment.author._id)) {
+    //       role = "creator";
+    //     }
+    //     const replies = await Reply.find({
+    //       comment,
+    //     })
+    //       .limit(3)
+    //       .select("content author")
+    //       .sort({ createdAt: -1 })
+    //       .populate("author");
+
+    //     const mappedReplies = replies.map((value) => {
+    //       const reply = value._doc;
+    //       let role = "backer";
+    //       if (project.creator._id.equals(reply.author._id)) {
+    //         role = "creator";
+    //       }
+    //       const author = {
+    //         name: reply.author.name,
+    //         avatar: reply.author.avatarUrl,
+    //         role,
+    //       };
+
+    //       return { ...reply, author };
+    //     });
+
+    //     const author = {
+    //       name: comment.author.name,
+    //       avatar: comment.author.avatarUrl,
+    //       role,
+    //     };
+
+    //     const totalReplies = await Reply.countDocuments({
+    //       comment,
+    //     });
+
+    //     return { ...comment, author, totalReplies, replies: mappedReplies };
+    //   })
+    // );
+
+    // const commentWithReplies = mappedComments
+    //   .filter((result) => result.status === "fulfilled")
+    //   .map((result) => result.value);
+
+    res.status(200).json({
+      error: false,
+      message: "Berhasil mengambil data.",
+      status: 200,
+      data: {
+        refreshToken: req.refreshToken,
+        replies: mappedReplies,
+      },
+    });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
+
 export const postUpdateProject = async (req, res, next) => {
   try {
     if (!req.params?.profileId || !req.params?.projectId) {
@@ -710,12 +830,13 @@ export const postComment = async (req, res, next) => {
         refreshToken: req.refreshToken,
         newComment: {
           _id: comment._id,
+          content: comment.content,
           author: {
             role,
             name: author.name,
             avatar: author.avatarUrl,
           },
-          content: comment.content,
+          totalReplies: 0,
           replies: [],
         },
       },
