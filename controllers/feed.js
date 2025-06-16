@@ -16,7 +16,7 @@ export const getFeaturedProject = async (req, res, next) => {
       .populate("creator");
 
     const title = project.basic.title;
-    const subtitle = project.basic.subtitle;
+    const subtitle = project.basic.subTitle;
     const imageUrl = project.basic.imageUrl;
     const creator = project.creator.name;
     const creatorSlug = project.creator.slug;
