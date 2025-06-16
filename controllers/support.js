@@ -232,7 +232,7 @@ export const postSupportProject = async (req, res, next) => {
 
 export const updateSupportProjectStatus = async (req, res, next) => {
   try {
-    if (!req.body?.id || !req.body?.order_id) {
+    if (!req.body?.id && !req.body?.order_id) {
       const error = new Error("No support id provided.");
       error.statusCode = 400;
       throw error;
