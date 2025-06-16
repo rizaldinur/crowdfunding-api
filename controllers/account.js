@@ -226,6 +226,7 @@ export const getProfileBackedProjects = async (req, res, next) => {
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
+            timeZone: "short",
           }),
         };
       })
