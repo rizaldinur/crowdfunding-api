@@ -18,9 +18,9 @@ router.post(
   supportController.postSupportProject
 );
 
-router.put(
+router.post(
   "/support/update-status",
-  isAuth,
+  // isAuth,
   supportController.updateSupportProjectStatus
 );
 

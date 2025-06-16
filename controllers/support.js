@@ -87,7 +87,6 @@ export const getSupportStatus = async (req, res, next) => {
     const project = await Project.findById(support.supportedProject)
       .select("creator")
       .populate("creator");
-    console.log(project);
 
     const { userId, slug } = req.authData;
 
@@ -187,8 +186,12 @@ export const postSupportProject = async (req, res, next) => {
         merchant_name: project.creator.name,
       },
       customer_details: {
+        first_name: supporter.name.split(" ")[0],
+        last_name: supporter.name.split(" ")[1],
         email: supporter.email,
         billing_address: {
+          first_name: supporter.name.split(" ")[0],
+          last_name: supporter.name.split(" ")[1],
           email: supporter.email,
           country_code: "IDN",
         },
@@ -229,14 +232,16 @@ export const postSupportProject = async (req, res, next) => {
 
 export const updateSupportProjectStatus = async (req, res, next) => {
   try {
-    if (!req.body?.id) {
+    if (!req.body?.id || !req.body?.order_id) {
       const error = new Error("No support id provided.");
       error.statusCode = 400;
       throw error;
     }
 
     const { id } = req.body;
-    const support = await Support.findById(id).populate("supportedProject");
+    const support = await Support.findById(id || req.body.order_id).populate(
+      "supportedProject"
+    );
 
     if (!support) {
       const error = new Error("Support record not found.");
