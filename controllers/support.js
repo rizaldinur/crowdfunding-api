@@ -274,7 +274,9 @@ export const updateSupportProjectStatus = async (req, res, next) => {
     support.transaction.id = transaction.transaction_id;
     support.transaction.statusCode = transaction.status_code;
     support.transaction.status = transaction.transaction_status;
-    support.transaction.expiryTime = new Date(transaction.expiry_time);
+    support.transaction.expiryTime = new Date(
+      transaction.expiry_time
+    ).toISOString();
     await support.save();
 
     res.status(201).json({
