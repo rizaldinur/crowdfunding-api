@@ -220,7 +220,7 @@ export const getProfileBackedProjects = async (req, res, next) => {
           supportAmount: support.supportAmount,
           transactionStatus: support.transaction.status,
           transactionStatusCode: support.transaction.statusCode,
-          createdAt: support.createdAt.toLocaleDateString("id-ID", {
+          createdAt: support.createdAt.toLocaleString("id-ID", {
             day: "numeric",
             month: "long",
             year: "numeric",
