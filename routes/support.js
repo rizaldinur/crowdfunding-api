@@ -20,7 +20,7 @@ router.post(
 
 router.post(
   "/support/update-status",
-  // isAuth,
+  isAuth,
   supportController.updateSupportProjectStatus
 );
 
