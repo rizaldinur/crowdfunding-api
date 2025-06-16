@@ -219,6 +219,9 @@ export const getProjectHeader = async (req, res, next) => {
 
     const uniqueSupporters = await Support.distinct("supporter", {
       supportedProject: project,
+      "transaction.status": {
+        $in: ["settlement", "capture"],
+      },
     });
     const countSupporters = uniqueSupporters.length;
     const fundingProgress = Math.round(
