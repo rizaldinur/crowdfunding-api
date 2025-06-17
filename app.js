@@ -32,8 +32,9 @@ app.use("/data", express.static("data"));
 
 app.use((req, res, next) => {
   const allowedOrigins = [
-    process.env.CLIENT_ORIGIN_URL,
+    process.env.DEV_CLIENT_ORIGIN_URL,
     process.env.PREVIEW_CLIENT_ORIGIN_URL,
+    process.env.PROD_CLIENT_ORIGIN_URL,
   ];
 
   const origin = req.headers.origin;
