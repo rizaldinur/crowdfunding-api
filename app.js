@@ -100,33 +100,6 @@ let newTask = nodeCron.createTask(
       }
     );
     console.log(resUpdateFinished.matchedCount);
-
-    const supports = await Support.find({
-      "transaction.status": "pending",
-      "transaction.expiryTime": {
-        $exists: true,
-        $ne: null,
-        $lte: now,
-      },
-    });
-
-    let countUpdateSupport = 0;
-    await Promise.allSettled(
-      supports.map(async (support) => {
-        try {
-          const snapStatus = await snap.transaction.status(
-            support._id.toString()
-          );
-          support.transaction.statusCode = snapStatus.status_code;
-          support.transaction.status = snapStatus.transaction_status;
-          await support.save();
-          countUpdateSupport++;
-        } catch (err) {
-          console.error(`Error updating Support ${support._id}:`, err);
-        }
-      })
-    );
-    console.log(countUpdateSupport);
   },
   {
     timezone: "UTC",
