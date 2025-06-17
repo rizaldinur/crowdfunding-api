@@ -33,3 +33,4 @@ dist-ssr
 # local directory
 images/
 data/
+playground.js
