@@ -111,6 +111,7 @@ export const getSupportStatus = async (req, res, next) => {
         supporterSlug: supporter.slug,
         supporterAvatar: supporter.avatar,
         projectSlug: supportedProject.slug,
+        title: supportedProject.basic.title,
         imageUrl: supportedProject.basic.imageUrl,
         creatorSlug: creator.slug,
         creatorName: creator.name,
@@ -238,21 +239,12 @@ export const updateSupportProjectStatus = async (req, res, next) => {
       throw error;
     }
 
-    const { id } = req.body;
-    const support = await Support.findById(id || req.body.order_id).populate(
-      "supportedProject"
-    );
+    const id = req.body?.id || req.body?.order_id;
+    const support = await Support.findById(id).populate("supportedProject");
 
     if (!support) {
       const error = new Error("Support record not found.");
       error.statusCode = 400;
-      throw error;
-    }
-
-    const { userId } = req.authData;
-    if (!support.supporter.equals(userId)) {
-      const error = new Error("Unauthorized.");
-      error.statusCode = 401;
       throw error;
     }
 
@@ -263,14 +255,14 @@ export const updateSupportProjectStatus = async (req, res, next) => {
       throw error;
     }
 
-    if (
-      transaction.transaction_status === "capture" ||
-      transaction.transaction_status === "settlement"
-    ) {
-      const project = await Project.findById(support.supportedProject._id);
-      project.funding = project.funding + support.supportAmount;
-      await project.save();
-    }
+    // if (
+    //   transaction.transaction_status === "capture" ||
+    //   transaction.transaction_status === "settlement"
+    // ) {
+    //   const project = await Project.findById(support.supportedProject._id);
+    //   project.funding = project.funding + support.supportAmount;
+    //   await project.save();
+    // }
     support.transaction.id = transaction.transaction_id;
     support.transaction.statusCode = transaction.status_code;
     support.transaction.status = transaction.transaction_status;
@@ -279,12 +271,46 @@ export const updateSupportProjectStatus = async (req, res, next) => {
     ).toISOString();
     await support.save();
 
+    let supportedProjectName;
+    let supportedProjectCurrentFunding;
+    if (
+      support.transaction.status === "capture" ||
+      support.transaction.status === "settlement"
+    ) {
+      const project = await Project.findById(support.supportedProject);
+      const aggregate = await Support.aggregate([
+        {
+          $match: {
+            supportedProject: new mongoose.Types.ObjectId(project._id),
+          },
+        },
+        {
+          $match: { "transaction.status": { $in: ["settlement", "capture"] } },
+        },
+        {
+          $group: {
+            _id: "$supportedProject",
+            totalFunding: { $sum: "$supportAmount" },
+          },
+        },
+      ]);
+      console.log(aggregate);
+
+      const totalFunding = aggregate[0].totalFunding;
+      project.funding = totalFunding;
+      await project.save();
+
+      supportedProjectName = project.basic.title;
+      supportedProjectCurrentFunding = project.funding;
+    }
     res.status(201).json({
       error: false,
       status: 201,
       message: "skibidi",
       data: {
         supportId: support._id,
+        supportedProjectName,
+        supportedProjectCurrentFunding,
         transactionStatus: support.transaction.status,
         transactionExpiryTime: support.transaction.expiryTime,
       },
